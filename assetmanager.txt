@@ -1,0 +1,113 @@
+Global header
+- Header - TRPH
+- Version - 1 byte
+- Check (?) - (File size + version) * TRPH (in big endian...)
+------------------------------------------------------
+.anim
+------
+- Header - ANIM
+- Length of name - 1 byte
+- Name in bytes
+- # of frames - 1 byte
+- # of loops? - 1 byte (Signed, -1 or FF = loop forever)
+- For every frame
+    - File path size - 1 byte
+    - File path in bytes
+    - Center XY - 4 bytes
+    - Delay - 2 bytes (int milliseconds)
+
+------
+.pack
+------
+- Header - PACK
+- Length of name - 1 byte
+- Name in bytes
+- # of items - 1 byte
+- For every item
+    - File path size - 1 byte
+    - File path in bytes
+------
+.text
+------
+- Header - TEXT
+- Length of name - 1 byte
+- Name in bytes
+- # of strings - 1 byte
+- For every string
+  - String size - 2 bytes
+  - String in bytes
+
+**Compile a header file TO::
+** - Correspond name with ID; (thus, IDs are not necessarily unique across different kinds of data)
+=======
+
+List.to - DONE
+=======
+- Global header
+- ID of corresponding table - 1 byte
+- # of tables - 2 bytes
+- For each table
+  - ID of table - 1 byte
+  - # of entries - 2 bytes
+  - # of bytes for each file size - 1 byte
+  - For each entry - x	 bytes for file size
+
+- 00 00 - png
+- 01 00 - ogg
+- 02 00 - string
+- 03 00 - anim
+- 04 00 - pack
+- .. ..
+=======
+
+Sprite.to - DONE
+=======
+- Global header
+- ID of corresponding table - 1 byte
+- # of entries - 2 bytes
+- For each file
+  - File in bytes
+=======
+
+Sound.to - DONE
+=======
+- Global header
+- ID of corresponding table - 1 byte
+- # of entries - 2 bytes
+- For each file
+  - File in bytes
+=======
+
+String.to - DONE
+=======
+- Global header
+- ID of corresponding table - 1 byte
+- # of entries - 2 bytes
+- For each string
+  - String in bytes
+=======
+
+Anim.to - DONE
+=======
+- Global header
+- ID of corresponding table - 1 byte
+- # of entries - 2 bytes
+- For each animation
+  - # of frames - 1 byte
+  - # of loops? - 1 byte
+  - For each frame
+    - ID of sprite - 2 bytes
+    - Center XY - 4 bytes
+    - Delay - 2 bytes (int milliseconds)
+=======
+
+Pack.to - DONE
+=======
+- Global header
+- ID of corresponding table - 1 byte
+- # of sets - 2 bytes
+- For each set
+  - # of items - 1 byte
+  - For each item
+    - Corresponding table/type - 1 byte
+    - ID - 2 bytes
