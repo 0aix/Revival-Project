@@ -4,6 +4,7 @@
 namespace TO
 {
 	const int WARRIOR_STAND_D = 0;
+	const int TILE_PACK = 0;
 }
 
 #endif

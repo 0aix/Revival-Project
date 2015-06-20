@@ -88,6 +88,10 @@
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
+            // openFileDialog1
+            // 
+            this.openFileDialog1.Multiselect = true;
+            // 
             // label2
             // 
             this.label2.AutoSize = true;

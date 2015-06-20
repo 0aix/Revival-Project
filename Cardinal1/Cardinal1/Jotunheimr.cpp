@@ -503,13 +503,15 @@ namespace Jotunheimr
 								packer[i].bDone = packer[i].package == NULL;
 								packer[i].hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PackerThread, (packer + i), 0, NULL);
 							}
-							if (packer[i].bDone && curr != end)
+							if (packer[i].bDone)
 							{
 								packer[i].package = curr;
 								packer[i].bDone = false;
 								SetEvent(packer[i].hEvent);
 								prev->pNext = curr->pNext;
 								curr = prev;
+								if (curr->pNext == end)
+									end->pNext = curr;
 								break;
 							}
 						}

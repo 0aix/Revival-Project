@@ -6,6 +6,7 @@ Warrior::Warrior(World* map, int tx, int ty, char* cname) : Character(map)
 	cTile.x = tx;
 	cTile.y = ty;
 	nTile = cTile;
+	map->SetOccupied(tx, ty, true);
 	pos = D3DXVECTOR3(tx * C::METER + C::HALF, ty * C::METER + C::HALF, 0.0f);
 	npos = pos;
 	vel = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
@@ -20,8 +21,8 @@ Warrior::Warrior(World* map, int tx, int ty, char* cname) : Character(map)
 
 	cooldown[0] = 0.0f; cooldown[1] = 0.0f; cooldown[2] = 0.0f; cooldown[3] = 0.0f;
 
-	speed = 400.0f;
-	rollspeed = 500.0f;
+	speed = 2 * C::METER;
+	rollspeed = 3 * C::METER;
 	cast = 0.0f;
 	locked = 0.0f;
 	nextaction = S::Stand;
@@ -39,9 +40,8 @@ Warrior::Warrior(World* map, int tx, int ty, char* cname) : Character(map)
 	kills = 0;
 	deaths = 0;
 
-	//ANIMS HERE
 	Anim* anim;
-	while (!Jotunheimr::LoadResource(TO::ANIM, TO::WARRIOR_STAND_D, (void**)&anim));
+	Jotunheimr::LoadResource(TO::ANIM, TO::WARRIOR_STAND_D, (void**)&anim);
 	animation = SpriteAnimation(anim->spriteanim);
 	sprite = animation.Render();
 }
