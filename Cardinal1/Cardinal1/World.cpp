@@ -10,7 +10,14 @@ World::World(int width, int height, int cap)
 	players = new Character*[cap];
 	grid = new Tile*[width];
 	for (int i = 0; i < width; i++)
+	{
 		grid[i] = new Tile[height];
+		for (int n = 0; n < height; n++)
+		{
+			grid[i][n].type = 4; //just which tile to use
+			grid[i][n].flags = 0;
+		}
+	}
 	size = D3DXVECTOR3(width * C::METER, height * C::METER, 0.0f); //replace w/ Constants::TILE_LENGTH later
 	pBallBase = new BallList;
 	pBallBase->pBall = NULL;

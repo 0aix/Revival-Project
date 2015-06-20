@@ -8,8 +8,8 @@ namespace C
 	const float HALF = METER / 2.0f;
 	const float RADIUS = 100.0f;
 	const float HALF_RADIUS = RADIUS / 2.0f;
-	const float QUEUE_TIME = 0.400f;
-	const float TURN_MOVE_TIME = 0.300f;
+	const float QUEUE_TIME = 0.050f;
+	const float TURN_MOVE_TIME = 1.300f;
 
 	const int WINDOW_WIDTH = 800;
 	const int WINDOW_HEIGHT = 600;

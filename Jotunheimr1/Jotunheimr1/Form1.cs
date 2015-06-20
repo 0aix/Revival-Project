@@ -54,20 +54,23 @@ namespace Jotunheimr1
         {
             if(openFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                if (openFileDialog1.FileName.Contains(root))
+                int count = openFileDialog1.FileNames.Length;
+                for (int i = 0; i < count; i++)
                 {
-                    string path = openFileDialog1.FileName.Substring(rootlength);
-                    AnimItem item = new AnimItem();
-                    item.name = openFileDialog1.SafeFileName;
-                    item.path = path;
-                    AnimItems.Add(item);
-                    listBox1.Items.Add(path);
-                    listBox1.SelectedIndex = listBox1.Items.Count - 1;
-                    openFileDialog1.InitialDirectory = openFileDialog1.FileName;
-                    openFileDialog1.FileName = "";
+                    if (openFileDialog1.FileNames[i].Contains(root))
+                    {
+                        string path = openFileDialog1.FileNames[i].Substring(rootlength);
+                        AnimItem item = new AnimItem();
+                        item.name = openFileDialog1.SafeFileNames[i];
+                        item.path = path;
+                        AnimItems.Add(item);
+                        listBox1.Items.Add(path);
+                        openFileDialog1.InitialDirectory = openFileDialog1.FileName;
+                        openFileDialog1.FileName = "";
+                    }
+                    else
+                        MessageBox.Show("File must be under the root directory");
                 }
-                else
-                    MessageBox.Show("File must be under the root directory");
             }
         }
 
@@ -103,6 +106,7 @@ namespace Jotunheimr1
             listBox1.Items.Clear();
             AnimItems.Clear();
             label5.Text = "";
+            textBox2.Text = "";
             textBox3.Text = "";
             textBox4.Text = "";
             textBox5.Text = "";
@@ -110,6 +114,7 @@ namespace Jotunheimr1
             textBox4.Enabled = false;
             textBox5.Enabled = false;
             button6.Enabled = false;
+            checkBox1.Checked = false;
         }
 
         private void button6_Click(object sender, EventArgs e)
@@ -188,7 +193,7 @@ namespace Jotunheimr1
                     }
                     fs.Flush();
                     fs.Close();
-                    openFileDialog2.InitialDirectory = openFileDialog1.FileName;
+                    openFileDialog2.InitialDirectory = openFileDialog2.FileName;
                     openFileDialog2.FileName = "";
                     MessageBox.Show("Written successfully");
                 }

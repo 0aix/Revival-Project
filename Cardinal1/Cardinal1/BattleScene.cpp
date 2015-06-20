@@ -3,7 +3,8 @@
 
 BattleScene::BattleScene() : Subscene()
 {
-	Jotunheimr::LoadResource(TO::ANIM, TO::WARRIOR_STAND_D, NULL);
+	while (!Jotunheimr::LoadResource(TO::ANIM, TO::WARRIOR_STAND_D, NULL));
+	while (!Jotunheimr::LoadResource(TO::PACK, TO::TILE_PACK, NULL));
 
 	world = new World(16, 16, 1);
 	player = new Warrior(world, 7, 7, "Fang0r");
@@ -16,6 +17,7 @@ BattleScene::BattleScene() : Subscene()
 
 void BattleScene::Release()
 {
+	Jotunheimr::UnloadResource(TO::PACK, TO::TILE_PACK);
 	Jotunheimr::UnloadResource(TO::ANIM, TO::WARRIOR_STAND_D);
 	delete this;
 }

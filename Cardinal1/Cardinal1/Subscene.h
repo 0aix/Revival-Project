@@ -59,6 +59,8 @@ private:
 	BallList* pBallBase; //null start node
 	EffectList* pEffectBase; //null start node
 	D3DXVECTOR3 camera;
+	IDirect3DTexture9** textures;
+	IDirect3DTexture9* texture;
 	float fTime = 0.0f;
 
 };

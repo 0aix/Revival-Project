@@ -21,6 +21,10 @@ WorldScene::WorldScene(Character* c, World* w) : Subscene()
 	D3DXMatrixTransformation2D(&mat, NULL, 0.0f, &scaling, NULL, 0.0f, NULL);
 	sprite->SetTransform(&mat);
 
+	Pack* pack;
+	Jotunheimr::LoadResource(TO::PACK, TO::TILE_PACK, (void**)&pack);
+	textures = (IDirect3DTexture9**)pack->pack;
+	texture = textures[4];
 
 	Clock.Start();
 }
@@ -83,7 +87,26 @@ void WorldScene::Update()
 
 void WorldScene::HandleInput()
 {
-
+	if (pInput->SHIFT)
+		player->HandleInput(S::Roll, true);
+	else
+		player->HandleInput(S::Roll, false);
+	if (pInput->VK[VK_LEFT])
+		player->HandleInput(S::Left, true);
+	else
+		player->HandleInput(S::Left, false);
+	if (pInput->VK[VK_RIGHT])
+		player->HandleInput(S::Right, true);
+	else
+		player->HandleInput(S::Right, false);
+	if (pInput->VK[VK_UP])
+		player->HandleInput(S::Up, true);
+	else
+		player->HandleInput(S::Up, false);
+	if (pInput->VK[VK_DOWN])
+		player->HandleInput(S::Down, true);
+	else
+		player->HandleInput(S::Down, false);
 }
 
 void WorldScene::Render()
@@ -91,11 +114,24 @@ void WorldScene::Render()
 	sprite->Begin(D3DXSPRITE_ALPHABLEND);
 
 	//map tiles
+	int x1 = (int)(camera.x / C::METER);
+	int y1 = (int)(camera.y / C::METER);
+	int x2 = (int)((camera.x + C::SCREEN_WIDTH) / C::METER);
+	int y2 = (int)((camera.y + C::SCREEN_HEIGHT) / C::METER);
+	D3DXVECTOR3 pos = D3DXVECTOR3(x1 * C::METER, y1 * C::METER, 0.0f) - camera;
+	for (int x = x1; x <= x2; x++)
+	{
+		pos.y = y1 * C::METER - camera.y;
+		for (int y = y1; y <= y2; y++)
+		{
+			//sprite->Draw(textures[world->grid[x1][y1].type], NULL, NULL, &pos, 0xFFFFFFFF);
+			sprite->Draw(texture, NULL, NULL, &pos, 0xFFFFFFFF);
+			pos.y += C::METER;
+		}
+		pos.x += C::METER;
+	}
 
-
-
-
-	//need to render players depending on z
+	//need to render players depending on z later
 	int cap = world->capacity;
 	for (int i = 0; i < cap; i++)
 	{

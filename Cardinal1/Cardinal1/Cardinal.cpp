@@ -10,7 +10,7 @@ namespace Cardinal
 	Input* pInput = NULL;
 	Scene* pScene;
 	RAWINPUT* pBuffer;
-	PUINT pSize;
+	DWORD dwSize;
 
 	HWND hWnd;
 	mutex mtx;
@@ -23,9 +23,8 @@ namespace Cardinal
 	{
 		pStates = new void*[STATE_COUNT];
 		pInput = new Input { 0 };
-
 		pBuffer = new RAWINPUT[BUFFER_SIZE];
-
+		
 		hWnd = hwnd;
 		
 		if (!Jotunheimr::Initialize())
@@ -69,12 +68,12 @@ namespace Cardinal
 		RAWINPUTDEVICE RID[2];
 		RID[0].usUsagePage = 1;
 		RID[0].usUsage = 2;
-		//RID[0].dwFlags = RIDEV_NOLEGACY;
+		RID[0].dwFlags = RIDEV_NOLEGACY;
 		RID[0].dwFlags = 0;
 		RID[0].hwndTarget = hWnd;
 		RID[1].usUsagePage = 1;
 		RID[1].usUsage = 6;
-		//RID[1].dwFlags = RIDEV_NOLEGACY;
+		RID[1].dwFlags = RIDEV_NOLEGACY;
 		RID[1].dwFlags = 0;
 		RID[1].hwndTarget = hWnd;
 		return RegisterRawInputDevices(RID, 2, sizeof(RAWINPUTDEVICE));
@@ -82,7 +81,8 @@ namespace Cardinal
 
 	void BufferInput(HRAWINPUT handle)
 	{
-		GetRawInputData(handle, RID_INPUT, &pBuffer[end], pSize, sizeof(RAWINPUTHEADER));
+		dwSize = sizeof(RAWINPUT);
+		GetRawInputData(handle, RID_INPUT, pBuffer + end, (PUINT)&dwSize, sizeof(RAWINPUTHEADER));
 		end++;
 		if (end == BUFFER_SIZE)
 			end = 0;
@@ -138,10 +138,8 @@ namespace Cardinal
 				else
 					pInput->scroll = false;
 				pInput->rawbuttons = mouse.ulRawButtons;
-
-				pScene->HandleInput();
 			}
-			else // if (raw->header.dwType == RIM_TYPEKEYBOARD)
+			else if (raw.header.dwType == RIM_TYPEKEYBOARD)
 			{
 				RAWKEYBOARD keyboard = raw.data.keyboard;
 				byte vk = keyboard.VKey;
@@ -157,14 +155,13 @@ namespace Cardinal
 						pInput->SHIFT = flag;
 					else if (vk == VK_MENU)
 						pInput->ALT = flag;
-
-					pScene->HandleInput();
 				}
 			}
 			start++;
 			if (start == BUFFER_SIZE)
 				start = 0;
 		}
+		pScene->HandleInput();
 	}
 
 	int LoadScene(Scene* ps)
