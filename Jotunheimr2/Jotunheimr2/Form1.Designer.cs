@@ -116,10 +116,12 @@
             // openFileDialog1
             // 
             this.openFileDialog1.FileName = "openFileDialog1";
+            this.openFileDialog1.Multiselect = true;
             // 
             // openFileDialog2
             // 
             this.openFileDialog2.CheckFileExists = false;
+            this.openFileDialog2.DefaultExt = "pack";
             // 
             // Form1
             // 

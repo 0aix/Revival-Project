@@ -52,7 +52,7 @@ namespace Jotunheimr1
 
         private void button5_Click(object sender, EventArgs e)
         {
-            if(openFileDialog1.ShowDialog() == DialogResult.OK)
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 int count = openFileDialog1.FileNames.Length;
                 for (int i = 0; i < count; i++)
@@ -65,12 +65,11 @@ namespace Jotunheimr1
                         item.path = path;
                         AnimItems.Add(item);
                         listBox1.Items.Add(path);
-                        openFileDialog1.InitialDirectory = openFileDialog1.FileName;
-                        openFileDialog1.FileName = "";
                     }
                     else
                         MessageBox.Show("File must be under the root directory");
                 }
+                openFileDialog1.FileName = "";
             }
         }
 
@@ -193,7 +192,6 @@ namespace Jotunheimr1
                     }
                     fs.Flush();
                     fs.Close();
-                    openFileDialog2.InitialDirectory = openFileDialog2.FileName;
                     openFileDialog2.FileName = "";
                     MessageBox.Show("Written successfully");
                 }

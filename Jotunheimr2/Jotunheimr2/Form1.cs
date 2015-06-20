@@ -50,22 +50,22 @@ namespace Jotunheimr2
         {
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                if (openFileDialog1.FileName.Contains(root))
+                int count = openFileDialog1.FileNames.Length;
+                for (int i = 0; i < count; i++)
                 {
-                    string path = openFileDialog1.FileName.Substring(rootlength);
-                    PackItem item = new PackItem();
-                    item.name = openFileDialog1.SafeFileName;
-                    item.path = path;
-                    PackItems.Add(item);
-                    listBox1.Items.Add(path);
-                    listBox1.SelectedIndex = listBox1.Items.Count - 1;
-                    openFileDialog1.InitialDirectory = openFileDialog1.FileName;
-                    openFileDialog1.FileName = "";
+                    if (openFileDialog1.FileNames[i].Contains(root))
+                    {
+                        string path = openFileDialog1.FileNames[i].Substring(rootlength);
+                        PackItem item = new PackItem();
+                        item.name = openFileDialog1.SafeFileNames[i];
+                        item.path = path;
+                        PackItems.Add(item);
+                        listBox1.Items.Add(path);
+                    }
+                    else
+                        MessageBox.Show("File must be under the root directory");
                 }
-                else
-                {
-                    MessageBox.Show("File must be under the root directory");
-                }
+                openFileDialog1.FileName = "";
             }
         }
 
@@ -86,6 +86,7 @@ namespace Jotunheimr2
         {
             listBox1.Items.Clear();
             PackItems.Clear();
+            textBox2.Text = "";
             label3.Text = "";
         }
 
@@ -122,7 +123,6 @@ namespace Jotunheimr2
                     }
                     fs.Flush();
                     fs.Close();
-                    openFileDialog2.InitialDirectory = openFileDialog1.FileName;
                     openFileDialog2.FileName = "";
                     MessageBox.Show("Written successfully");
                 }

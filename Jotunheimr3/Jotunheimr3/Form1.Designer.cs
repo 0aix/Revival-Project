@@ -153,6 +153,7 @@
             // openFileDialog1
             // 
             this.openFileDialog1.CheckFileExists = false;
+            this.openFileDialog1.DefaultExt = "text";
             // 
             // Form1
             // 
