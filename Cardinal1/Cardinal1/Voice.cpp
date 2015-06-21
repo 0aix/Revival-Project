@@ -19,6 +19,7 @@ Voice::Voice(IXAudio2* IXA2, int buffercount, int buffersize)
 	bLoop = false;
 	sampleRate = 0;
 	currentBuffer = 0;
+	vf = new OggVorbis_File;
 }
 
 Voice::~Voice()
@@ -35,20 +36,15 @@ Voice::~Voice()
 
 	if (vf)
 		ov_clear(vf);
+	delete vf;
 }
 
 bool Voice::Load(const char* filename)
 {
-	char strSoundPath[MAX_PATH];
-
-	GetCurrentDirectoryA(MAX_PATH, strSoundPath);
-	strcat_s(strSoundPath, MAX_PATH, "\\");
-	strcat_s(strSoundPath, MAX_PATH, filename);
-
 	FILE* file;
-	if (fopen_s(&file, strSoundPath, "rb"))
+	if (fopen_s(&file, filename, "rb"))
 		return false;
-
+	
 	if (ov_open_callbacks(file, vf, NULL, 0, OV_CALLBACKS_DEFAULT) < 0)
 	{
 		fclose(file);
@@ -66,8 +62,10 @@ bool Voice::Load(const char* filename)
 	wfm.nAvgBytesPerSec = wfm.nSamplesPerSec * wfm.nChannels * 2;
 	wfm.nBlockAlign = 2 * wfm.nChannels;
 	wfm.wFormatTag = 1;
-
+	//ogg_int64_t a = ov_pcm_total(vf, -1);
 	sampleRate = wfm.nSamplesPerSec;
+
+	delete vi;
 
 	DWORD pos = 0;
 	int sec = 0;

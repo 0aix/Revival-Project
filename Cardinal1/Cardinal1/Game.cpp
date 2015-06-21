@@ -3,6 +3,8 @@
 #include "Graphics.h"
 #include "Scene.h"
 
+#include "Voice.h"
+
 namespace Game
 {
 	HANDLE audio;

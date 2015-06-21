@@ -36,6 +36,29 @@ namespace Jotunheimr
 		GetSystemInfo(&info);
 		dwAllocGran = info.dwAllocationGranularity;
 
+		//Create/Empty temp folder
+		char buffer[MAX_PATH];
+		if (!CreateDirectory("temp", NULL)) //Check if directory already exists
+		{
+			//Don't bother deleting subdirectories since they shouldn't exist.
+			WIN32_FIND_DATA ffd;
+			HANDLE hFind = FindFirstFile("temp\\*", &ffd);
+			if (hFind != INVALID_HANDLE_VALUE)
+			{
+				do
+				{
+					if (!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+					{
+						sprintf(buffer, "temp\\%s", ffd.cFileName);
+						DeleteFile(buffer);
+					}
+				} while (FindNextFile(hFind, &ffd));
+				FindClose(hFind);
+			}
+		}
+		SetFileAttributes("temp", FILE_ATTRIBUTE_HIDDEN);
+
+
 		if (!LoadListTO())
 			return false;
 
@@ -90,6 +113,27 @@ namespace Jotunheimr
 			delete[] ListOffset[i];
 			delete[] ResList[i];
 		}
+
+		//Empty temp folder
+		char buffer[MAX_PATH];
+		if (!CreateDirectory("temp", NULL)) //Check if directory already exists
+		{
+			//Don't bother deleting subdirectories since they shouldn't exist.
+			WIN32_FIND_DATA ffd;
+			HANDLE hFind = FindFirstFile("temp\\*", &ffd);
+			if (hFind != INVALID_HANDLE_VALUE)
+			{
+				do
+				{
+					if (!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+					{
+						sprintf(buffer, "temp\\%s", ffd.cFileName);
+						DeleteFile(buffer);
+					}
+				} while (FindNextFile(hFind, &ffd));
+				FindClose(hFind);
+			}
+		}
 	}
 
 	bool LoadListTO()
@@ -124,7 +168,7 @@ namespace Jotunheimr
 			//Check individual table type
 			if (*(pBase + nOffset) != i)
 				return false;
-
+			
 			WORD count = *(WORD*)(pBase + nOffset + 1);
 
 			DWORD* sizes = new DWORD[count];
@@ -199,11 +243,14 @@ namespace Jotunheimr
 
 	bool LoadResource(int type, int ID, void** pObj)
 	{
-		if (pObj)
-			*pObj = ResList[type][ID].loc;
-		if (ResList[type][ID].state == 2)
+		Res* res = &ResList[type][ID];
+		if (res->state == 2) //Loaded
+		{
+			if (pObj)
+				*pObj = res->loc;
 			return true;
-		if (ResList[type][ID].state == 0) //Not loaded
+		}
+		if (res->state == 0) //Not active
 		{
 			Item* item = new Item;
 			item->type = type;
@@ -215,7 +262,7 @@ namespace Jotunheimr
 			end->pNext->pNext = item;
 			item->pNext = end;
 			end->pNext = item;
-			ResList[type][ID].state = 1; //Loading
+			res->state = 1; //Loading
 			manager.mtx.unlock();
 		}
 		return false;
@@ -223,20 +270,18 @@ namespace Jotunheimr
 
 	void UnloadResource(int type, int ID)
 	{
-		Res* obj = &ResList[type][ID];
-		if (obj->loc && obj->state == 2) //Loaded
+		Res* res = &ResList[type][ID];
+		if (res->loc && res->state == 2) //Loaded
 		{
 			if (type == TO::SPRITE)
-				((IDirect3DTexture9*)obj->loc)->Release();
+				((IDirect3DTexture9*)res->loc)->Release();
 			else if (type == TO::SOUND)
-			{
-				//HAWKWARD
-			}
+				delete (RAWSOUND*)res->loc;
 			else if (type == TO::STRING)
-				delete (STRING*)obj->loc;
+				delete (STRING*)res->loc;
 			else if (type == TO::ANIM)
 			{
-				Anim* anim = (Anim*)obj->loc;
+				Anim* anim = (Anim*)res->loc;
 				Frame* frame = anim->frame;
 				BYTE count = anim->count;
 				for (BYTE i = 0; i < count; i++)
@@ -245,7 +290,7 @@ namespace Jotunheimr
 			}
 			else if (type == TO::PACK)
 			{
-				Pack* pack = (Pack*)obj->loc;
+				Pack* pack = (Pack*)res->loc;
 				BYTE* type = pack->type;
 				WORD* ID = pack->ID;
 				BYTE count = pack->count;
@@ -253,21 +298,9 @@ namespace Jotunheimr
 					UnloadResource(type[i], ID[i]);
 				delete pack;
 			}
-			obj->loc = NULL;
-			obj->state = 0; //Not loaded
+			res->loc = NULL;
+			res->state = 0; //Not active
 		}
-	}
-
-	void LoadPackage(Package* package)
-	{
-		checker.mtx.lock();
-		if (!checker.hThread)
-			checker.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CheckerThread, NULL, 0, NULL);
-		Package* end = checker.pEnd;
-		end->pNext->pNext = package;
-		package->pNext = end;
-		end->pNext = package;
-		checker.mtx.unlock();
 	}
 
 	void ManagerThread()
@@ -383,13 +416,52 @@ namespace Jotunheimr
 				if (type == TO::SPRITE)
 				{
 					IDirect3DTexture9* texture;
-					HRESULT r = D3DXCreateTextureFromFileInMemory(Graphics::d3ddev, base, size, &texture);
+					D3DXCreateTextureFromFileInMemory(Graphics::d3ddev, base, size, &texture);
 					ResList[type][ID].loc = texture;
 					ResList[type][ID].state = 2; //Loaded
 				}
 				else if (type == TO::SOUND)
 				{
-					//HAAAAWKWARD
+					char str[MAX_PATH];
+					sprintf(str, "temp\\%d_%d.tmp", type, ID);
+					FILE* file = fopen(str, "w+b");
+					fwrite(base, 1, size, file);
+					rewind(file);
+					OggVorbis_File* vf = new OggVorbis_File;
+					if (ov_open_callbacks(file, vf, NULL, 0, OV_CALLBACKS_DEFAULT) >= 0)
+					{
+						vorbis_info* vi = ov_info(vf, -1);
+
+						RAWSOUND* raw = new RAWSOUND;
+						raw->wfm.cbSize = sizeof(WAVEFORMATEX);
+						raw->wfm.nChannels = vi->channels;
+						raw->wfm.wBitsPerSample = 16; //OGG is always 16-bit
+						raw->wfm.nSamplesPerSec = vi->rate;
+						raw->wfm.nAvgBytesPerSec = vi->rate * vi->channels * 2;
+						raw->wfm.nBlockAlign = 2 * vi->channels;
+						raw->wfm.wFormatTag = 1;
+
+						DWORD length = (DWORD)ov_pcm_total(vf, -1) * vi->channels * 2;
+						DWORD pos = 0;
+						int sec = 0;
+						int ret = 1;
+
+						BYTE* pBase = new BYTE[length];
+						while (ret > 0 && pos < length)
+						{
+							ret = ov_read(vf, (char*)pBase + pos, length - pos, 0, 2, 1, &sec);
+							pos += ret;
+						}
+						raw->buffer.pAudioData = pBase;
+						raw->buffer.AudioBytes = length;
+						ResList[type][ID].loc = raw;
+						ResList[type][ID].state = 2; //Loaded
+
+						delete vi;
+						ov_clear(vf);
+					}
+					delete vf;
+					remove(str);
 				}
 				else if (type == TO::STRING)
 				{
@@ -454,6 +526,18 @@ namespace Jotunheimr
 			CloseHandle(worker->hThread);
 			worker->hThread = NULL;
 		}
+	}
+
+	void LoadPackage(Package* package)
+	{
+		checker.mtx.lock();
+		if (!checker.hThread)
+			checker.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CheckerThread, NULL, 0, NULL);
+		Package* end = checker.pEnd;
+		end->pNext->pNext = package;
+		package->pNext = end;
+		end->pNext = package;
+		checker.mtx.unlock();
 	}
 
 	void CheckerThread()
@@ -589,6 +673,93 @@ namespace Jotunheimr
 		{
 			CloseHandle(packer->hThread);
 			packer->hThread = NULL;
+		}
+	}
+
+	bool MapResource(int type, int ID, BUFFER** pObj)
+	{
+		Res* res = &ResList[type][ID];
+		if (res->state == 0) //Not active
+		{
+			//Hopefully, I don't have gigantic files over 64MB
+			DWORD length = ListSize[type][ID];
+			HANDLE hFile = TOFile[type].hFile;
+			SetFilePointer(hFile, length, NULL, FILE_BEGIN);
+			BUFFER* buffer = new BUFFER(length);
+			ReadFile(hFile, buffer->pBase, length, NULL, NULL);
+			res->loc = buffer;
+			res->state = 3; //Mapped
+		}
+		if (res->state == 3) //Mapped
+		{
+			if (pObj)
+				*pObj = (BUFFER*)res->loc;
+			return true;
+		}
+		return false;
+	}
+
+	void UnmapResource(int type, int ID)
+	{
+		Res* res = &ResList[type][ID];
+		if (res->loc && res->state == 3) //Mapped
+		{
+			delete (BUFFER*)res->loc; //Destructs the buffer
+			res->loc = NULL;
+			res->state = 0; //Not active
+		}
+	}
+
+	bool LoadSound(int ID, SOUND** pSound)
+	{
+		Res* res = &ResList[TO::SOUND][ID];
+		if (res->state == 0) //Not active
+		{
+			BUFFER* buffer;
+			MapResource(TO::SOUND, ID, &buffer);
+			char str[MAX_PATH];
+			sprintf(str, "temp\\%d_%d.tmp",TO::SOUND, ID);
+			FILE* file = fopen(str, "w+b");
+			fwrite(buffer->pBase, 1, buffer->dwSize, file);
+			rewind(file);
+			SOUND* sound = new SOUND(str);
+			if (ov_open_callbacks(file, sound->vf, NULL, 0, OV_CALLBACKS_DEFAULT) >= 0)
+			{
+				vorbis_info* vi = ov_info(sound->vf, -1);
+
+				sound->wfm.cbSize = sizeof(WAVEFORMATEX);
+				sound->wfm.nChannels = vi->channels;
+				sound->wfm.wBitsPerSample = 16; //OGG is always 16-bit
+				sound->wfm.nSamplesPerSec = vi->rate;
+				sound->wfm.nAvgBytesPerSec = vi->rate * vi->channels * 2;
+				sound->wfm.nBlockAlign = 2 * vi->channels;
+				sound->wfm.wFormatTag = 1;
+
+				delete vi;
+			}
+			UnmapResource(TO::SOUND, ID);
+			res->loc = sound;
+			res->state = 4; //Stream
+		}
+		if (res->state == 4) //Stream
+		{
+			if (pSound)
+				*pSound = (SOUND*)res->loc;
+			return true;
+		}
+	}
+
+	void UnloadSound(int ID)
+	{
+		Res* res = &ResList[TO::SOUND][ID];
+		if (res->loc && res->state == 4) //Stream
+		{
+			SOUND* sound = (SOUND*)res->loc;
+			ov_clear(sound->vf);
+			remove(sound->tmpname);
+			delete sound; //Destructs vf and tmpname
+			res->loc = NULL;
+			res->state = 0; //Not active
 		}
 	}
 }
