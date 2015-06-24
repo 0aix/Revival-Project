@@ -111,8 +111,6 @@ void WorldScene::HandleInput()
 
 void WorldScene::Render()
 {
-	sprite->Begin(D3DXSPRITE_ALPHABLEND);
-
 	//map tiles
 	int x1 = (int)(camera.x / C::METER);
 	int y1 = (int)(camera.y / C::METER);
@@ -156,6 +154,4 @@ void WorldScene::Render()
 		sprite->Draw(sp->texture, NULL, NULL, &rpos, 0xFFFFFFFF);
 		currE = currE->pNext;
 	}
-
-	sprite->End();
 }

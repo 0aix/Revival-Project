@@ -75,11 +75,13 @@
     <ClCompile Include="Ball.cpp" />
     <ClCompile Include="BattleScene.cpp" />
     <ClCompile Include="BattleUIScene.cpp" />
+    <ClCompile Include="Buffer.cpp" />
     <ClCompile Include="Cardinal.cpp" />
     <ClCompile Include="Character.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Jotunheimr.cpp" />
+    <ClCompile Include="LoadScene.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MainScene.cpp" />
     <ClCompile Include="Misc.cpp" />
@@ -93,6 +95,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Audio.h" />
+    <ClInclude Include="Buffer.h" />
     <ClInclude Include="Cardinal.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="Game.h" />

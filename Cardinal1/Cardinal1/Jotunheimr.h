@@ -1,11 +1,12 @@
 #ifndef JOTUNHEIMR_H
 #define JOTUNHEIMR_H
 
-#include <vorbisfile.h>
-#include <XAudio2.h>
 #include "Main.h"
 #include "Sprite.h"
 #include "TO.h"
+
+struct BUFFER;
+struct SOUND;
 
 namespace TO
 {
@@ -22,6 +23,9 @@ struct TOFILE
 	HANDLE hFile;
 	HANDLE hMapFile;
 	DWORD dwSize;
+	char* cName;
+
+	~TOFILE() { delete[] cName; }
 };
 
 struct FILEVIEW
@@ -33,49 +37,10 @@ struct FILEVIEW
 	FILEVIEW* pNext = NULL;
 };
 
-struct BUFFER
-{
-	BYTE* pBase = NULL;
-	DWORD dwSize = 0;
-
-	BUFFER(DWORD length)
-	{
-		pBase = new BYTE[length];
-		dwSize = length; 
-	}
-	~BUFFER() { delete[] pBase; }
-};
-
-struct RAWSOUND
-{
-	XAUDIO2_BUFFER buffer;
-	WAVEFORMATEX wfm;
-};
-
-struct SOUND
-{
-	char* tmpname;
-	OggVorbis_File* vf;
-	WAVEFORMATEX wfm;
-
-	SOUND(char* name)
-	{
-		tmpname = new char[strlen(name) + 1]; //Null-terminating character
-		strcpy(tmpname, name);
-		vf = new OggVorbis_File;
-	}
-
-	~SOUND() 
-	{
-		delete vf;
-		delete[] tmpname; 
-	}
-};
-
 struct Res
 {
 	void* loc = NULL;
-	BYTE state = 0; //0 - nothing, 1 - loading, 2 - loaded
+	BYTE state = 0; //0 - nothing, 1 - loading, 2 - loaded, 3 - mapping, 4 - mapped
 };
 
 struct Frame
@@ -273,18 +238,14 @@ namespace Jotunheimr
 	//Async loading
 	bool LoadResource(int type, int ID, void** pObj);
 	void UnloadResource(int type, int ID);
+	bool MapResource(int type, int ID, void** pObj);
+	void UnmapResource(int type, int ID);
 	void ManagerThread();
 	void WorkerThread(void* param);
 
 	void LoadPackage(Package* package);
 	void CheckerThread();
 	void PackerThread(void* param);
-
-	//In-thread processing
-	bool MapResource(int type, int ID, void** pObj);
-	void UnmapResource(int type, int ID);
-	bool LoadSound(int ID, SOUND** pSound);
-	void UnloadSound(int ID);
 }
 
 #endif

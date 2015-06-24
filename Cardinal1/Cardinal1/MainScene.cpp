@@ -30,10 +30,12 @@ void MainScene::Render()
 {
 	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0xFFFFFFFF, 1.0f, 0);
 	d3ddev->BeginScene();
+	sprite->Begin(D3DXSPRITE_ALPHABLEND);
 
 	pScenes[0]->Render();
 	pScenes[1]->Render();
 
+	sprite->End();
 	d3ddev->EndScene();
 	d3ddev->Present(NULL, NULL, NULL, NULL);
 }

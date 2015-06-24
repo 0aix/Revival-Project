@@ -55,6 +55,8 @@ public:
 	void HandleInput();
 	void Render();
 
+private:
+	int tick = 0;
 };
 
 class EndScene : public Scene

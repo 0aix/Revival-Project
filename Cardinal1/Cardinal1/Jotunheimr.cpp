@@ -1,6 +1,10 @@
 #include "Jotunheimr.h"
+#include "Audio.h"
 #include "Graphics.h"
+#include "Buffer.h"
 #include <fstream>
+#include <vorbisfile.h>
+#include <XAudio2.h>
 
 namespace Jotunheimr
 {
@@ -138,7 +142,7 @@ namespace Jotunheimr
 
 	bool LoadListTO()
 	{
-		HANDLE hFile = CreateFile("List.to", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		HANDLE hFile = CreateFile("List.to", GENERIC_READ, 1, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (hFile == INVALID_HANDLE_VALUE)
 			return false;
 		HANDLE hMapFile = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
@@ -201,7 +205,7 @@ namespace Jotunheimr
 
 	bool LoadTO(int type, char* filename)
 	{
-		HANDLE hFile = CreateFile(filename, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		HANDLE hFile = CreateFile(filename, GENERIC_READ, 1, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (hFile == INVALID_HANDLE_VALUE)
 			return false;
 
@@ -237,6 +241,8 @@ namespace Jotunheimr
 		TOFile[type].hFile = hFile;
 		TOFile[type].hMapFile = hMapFile;
 		TOFile[type].dwSize = GetFileSize(hFile, NULL);
+		TOFile[type].cName = new char[strlen(filename) + 1]; //Null-terminator
+		strcpy(TOFile[type].cName, filename);
 
 		return true;
 	}
@@ -303,6 +309,59 @@ namespace Jotunheimr
 		}
 	}
 
+	bool MapResource(int type, int ID, void** pObj)
+	{
+		Res* res = &ResList[type][ID];
+		if (res->state == 4) //Mapped
+		{
+			if (pObj)
+				*pObj = res->loc;
+			return true;
+		}
+		if (res->state == 0) //Not active
+		{
+			Item* item = new Item;
+			item->type = type;
+			item->ID = ID;
+			manager.mtx.lock();
+			if (!manager.hThread)
+				manager.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ManagerThread, NULL, 0, NULL);
+			Item* end = manager.pEnd;
+			end->pNext->pNext = item;
+			item->pNext = end;
+			end->pNext = item;
+			res->state = 3; //Mapping
+			manager.mtx.unlock();
+		}
+		return false;
+	}
+
+	void UnmapResource(int type, int ID)
+	{
+		Res* res = &ResList[type][ID];
+		if (res->loc && res->state == 4) //Mapped
+		{
+			if (type == TO::PACK) //Unmap resources in pack
+			{
+				Pack* pack = (Pack*)res->loc;
+				BYTE* type = pack->type;
+				WORD* ID = pack->ID;
+				BYTE count = pack->count;
+				for (BYTE i = 0; i < count; i++)
+					UnmapResource(type[i], ID[i]);
+				delete pack;
+			}
+			else //everything else
+			{
+				BUFFER* buffer = (BUFFER*)res->loc;
+				delete[] buffer->pBase;
+				delete buffer;
+				res->loc = NULL;
+				res->state = 0; //Not active
+			}
+		}
+	}
+
 	void ManagerThread()
 	{
 		Item* base = manager.pBase;
@@ -311,7 +370,6 @@ namespace Jotunheimr
 		{
 			for (; !bExit; Sleep(500))
 			{
-				manager.mtx.lock();
 				Item* curr = base->pNext;
 				for (int i = 0; curr != end; i = (i + 1) % WORKER_COUNT)
 				{
@@ -323,53 +381,62 @@ namespace Jotunheimr
 					}
 					if (worker[i].bDone && curr != end)
 					{
+						manager.mtx.lock();
 						BYTE type = curr->type;
 						WORD ID = curr->ID;
 						DWORD itemsize = ListSize[type][ID];
 						DWORD itemoffset = ListOffset[type][ID];
-						FILEVIEW* fView = manager.fView[type];
-						FILEVIEW* prev = NULL;
-						bool found = false;
-						while (fView != NULL)
+						if (ResList[type][ID].state == 1 || type == TO::PACK) //Loading || pack
 						{
-							if (fView->dwOffset <= itemoffset && itemoffset + itemsize <= fView->dwSize)
+							FILEVIEW* fView = manager.fView[type];
+							FILEVIEW* prev = NULL;
+							bool found = false;
+							while (fView != NULL)
 							{
-								worker[i].pItem = curr;
-								worker[i].pView = fView;
-								InterlockedIncrement(&fView->dwRef);
-								found = true;
-								break;
+								if (fView->dwOffset <= itemoffset && itemoffset + itemsize <= fView->dwSize)
+								{
+									worker[i].pItem = curr;
+									worker[i].pView = fView;
+									InterlockedIncrement(&fView->dwRef);
+									found = true;
+									break;
+								}
+								if (manager.fViewSize[i] > VIEW_SIZE_LIMIT && fView->dwRef == 0)
+								{
+									if (prev)
+										prev->pNext = fView->pNext;
+									else
+										manager.fView[type] = fView->pNext;
+									UnmapViewOfFile(fView->pBase);
+									delete fView;
+									fView = prev->pNext;
+									continue;
+								}
+								prev = fView;
+								fView = fView->pNext;
 							}
-							if (manager.fViewSize[i] > VIEW_SIZE_LIMIT && fView->dwRef == 0)
+							if (!found)
 							{
-								if (prev)
-									prev->pNext = fView->pNext;
-								else
-									manager.fView[type] = fView->pNext;
-								UnmapViewOfFile(fView->pBase);
-								delete fView;
-								fView = prev->pNext;
-								continue;
-							}
-							prev = fView;
-							fView = fView->pNext;
-						}
-						if (!found)
-						{
-							FILEVIEW* pView = new FILEVIEW;
-							DWORD page_offset = (itemoffset / dwAllocGran) * dwAllocGran;
-							DWORD page_end = ((itemoffset + itemsize) / dwAllocGran + 1) * dwAllocGran;
-							if (page_end > TOFile[type].dwSize)
-								page_end = TOFile[type].dwSize;
-							pView->pBase = (BYTE*)MapViewOfFile(TOFile[type].hMapFile, FILE_MAP_READ, 0, page_offset, page_end - page_offset);
-							pView->dwSize = page_end;
-							pView->dwOffset = page_offset;
-							pView->dwRef = 1;
-							pView->pNext = manager.fView[type];
-							manager.fView[type] = pView;
+								FILEVIEW* pView = new FILEVIEW;
+								DWORD page_offset = (itemoffset / dwAllocGran) * dwAllocGran;
+								DWORD page_end = ((itemoffset + itemsize) / dwAllocGran + 1) * dwAllocGran;
+								if (page_end > TOFile[type].dwSize)
+									page_end = TOFile[type].dwSize;
+								pView->pBase = (BYTE*)MapViewOfFile(TOFile[type].hMapFile, FILE_MAP_READ, 0, page_offset, page_end - page_offset);
+								pView->dwSize = page_end;
+								pView->dwOffset = page_offset;
+								pView->dwRef = 1;
+								pView->pNext = manager.fView[type];
+								manager.fView[type] = pView;
 
+								worker[i].pItem = curr;
+								worker[i].pView = pView;
+							}
+						}
+						else //if (ResList[type][ID].state == 3) //Mapping
+						{
 							worker[i].pItem = curr;
-							worker[i].pView = pView;
+							worker[i].pView = NULL;
 						}
 						worker[i].bDone = false;
 						SetEvent(worker[i].hEvent);
@@ -378,9 +445,9 @@ namespace Jotunheimr
 						base->pNext = curr;
 						if (curr == end)
 							end->pNext = base;
+						manager.mtx.unlock();
 					}
 				}
-				manager.mtx.unlock();
 			}
 		}
 		catch (...)
@@ -412,110 +479,98 @@ namespace Jotunheimr
 				WORD ID = pItem->ID;
 				DWORD offset = ListOffset[type][ID];
 				DWORD size = ListSize[type][ID];
-				BYTE* base = pView->pBase + (offset - pView->dwOffset);
-				if (type == TO::SPRITE)
+				if (pView != NULL)
 				{
-					IDirect3DTexture9* texture;
-					D3DXCreateTextureFromFileInMemory(Graphics::d3ddev, base, size, &texture);
-					ResList[type][ID].loc = texture;
-					ResList[type][ID].state = 2; //Loaded
-				}
-				else if (type == TO::SOUND)
-				{
-					char str[MAX_PATH];
-					sprintf(str, "temp\\%d_%d.tmp", type, ID);
-					FILE* file = fopen(str, "w+b");
-					fwrite(base, 1, size, file);
-					rewind(file);
-					OggVorbis_File* vf = new OggVorbis_File;
-					if (ov_open_callbacks(file, vf, NULL, 0, OV_CALLBACKS_DEFAULT) >= 0)
+					BYTE* base = pView->pBase + (offset - pView->dwOffset);
+					if (type == TO::SPRITE)
 					{
-						vorbis_info* vi = ov_info(vf, -1);
-
-						RAWSOUND* raw = new RAWSOUND;
-						raw->wfm.cbSize = sizeof(WAVEFORMATEX);
-						raw->wfm.nChannels = vi->channels;
-						raw->wfm.wBitsPerSample = 16; //OGG is always 16-bit
-						raw->wfm.nSamplesPerSec = vi->rate;
-						raw->wfm.nAvgBytesPerSec = vi->rate * vi->channels * 2;
-						raw->wfm.nBlockAlign = 2 * vi->channels;
-						raw->wfm.wFormatTag = 1;
-
-						DWORD length = (DWORD)ov_pcm_total(vf, -1) * vi->channels * 2;
-						DWORD pos = 0;
-						int sec = 0;
-						int ret = 1;
-
-						BYTE* pBase = new BYTE[length];
-						while (ret > 0 && pos < length)
-						{
-							ret = ov_read(vf, (char*)pBase + pos, length - pos, 0, 2, 1, &sec);
-							pos += ret;
-						}
-						raw->buffer.pAudioData = pBase;
-						raw->buffer.AudioBytes = length;
+						IDirect3DTexture9* texture;
+						D3DXCreateTextureFromFileInMemory(Graphics::d3ddev, base, size, &texture);
+						ResList[type][ID].loc = texture;
+						ResList[type][ID].state = 2; //Loaded
+					}
+					else if (type == TO::SOUND)
+					{
+						BUFFER* buffer = new BUFFER;
+						buffer->pBase = base;
+						buffer->dwSize = size;
+						RAWSOUND* raw = Audio::LoadRawSound(buffer);
+						if (!raw)
+							throw 0;
+						delete buffer;
 						ResList[type][ID].loc = raw;
 						ResList[type][ID].state = 2; //Loaded
-
-						delete vi;
-						ov_clear(vf);
 					}
-					delete vf;
-					remove(str);
-				}
-				else if (type == TO::STRING)
-				{
-					STRING* str = new STRING(size);
-					memcpy(str->cstr, base, size);
-					ResList[type][ID].loc = str;
-					ResList[type][ID].state = 2; //Loaded
-				}
-				else if (type == TO::ANIM)
-				{
-					BYTE count = *base;
-					Anim* anim = new Anim(count, *(base + 1)); //The dereference is for loops
-					DWORD index = 2; //Offset for frames
-					for (BYTE i = 0; i < count; i++)
+					else if (type == TO::STRING)
 					{
-						WORD v = *(WORD*)(base + index);
-						LoadResource(TO::SPRITE, v, NULL);
-						anim->obj[i] = &ResList[TO::SPRITE][v];
-						anim->frame[i].ID = v;
-						anim->frame[i].x = *(WORD*)(base + index + 2);
-						anim->frame[i].y = *(WORD*)(base + index + 4);
-						anim->frame[i].delay = *(WORD*)(base + index + 6);
-						index += 8;
+						STRING* str = new STRING(size);
+						memcpy(str->cstr, base, size);
+						ResList[type][ID].loc = str;
+						ResList[type][ID].state = 2; //Loaded
 					}
-					Package* package = new Package;
-					package->type = type;
-					package->ID = ID;
-					package->package = anim;
-					LoadPackage(package);
-				}
-				else if (type == TO::PACK)
-				{
-					BYTE count = *base;
-					Pack* pack = new Pack(count);
-					DWORD index = 1; //Offset for items
-					for (BYTE i = 0; i < count; i++)
+					else if (type == TO::ANIM)
 					{
-						BYTE b = *(base + index);
-						WORD v = *(WORD*)(base + index + 1);
-						LoadResource(b, v, NULL);
-						pack->obj[i] = &ResList[b][v];
-						pack->type[i] = b;
-						pack->ID[i] = v;
-						index += 3;
+						BYTE count = *base;
+						Anim* anim = new Anim(count, *(base + 1)); //The dereference is for loops
+						DWORD index = 2; //Offset for frames
+						for (BYTE i = 0; i < count; i++)
+						{
+							WORD v = *(WORD*)(base + index);
+							LoadResource(TO::SPRITE, v, NULL);
+							anim->obj[i] = &ResList[TO::SPRITE][v];
+							anim->frame[i].ID = v;
+							anim->frame[i].x = *(WORD*)(base + index + 2);
+							anim->frame[i].y = *(WORD*)(base + index + 4);
+							anim->frame[i].delay = *(WORD*)(base + index + 6);
+							index += 8;
+						}
+						Package* package = new Package;
+						package->type = type;
+						package->ID = ID;
+						package->package = anim;
+						LoadPackage(package);
 					}
-					Package* package = new Package;
-					package->type = type;
-					package->ID = ID;
-					package->package = pack;
-					LoadPackage(package);
+					else if (type == TO::PACK)
+					{
+						BYTE count = *base;
+						Pack* pack = new Pack(count);
+						DWORD index = 1; //Offset for items
+						bool map = ResList[type][ID].state == 3; //Mapping
+						for (BYTE i = 0; i < count; i++)
+						{
+							BYTE b = *(base + index);
+							WORD v = *(WORD*)(base + index + 1);
+							if (!map)
+								LoadResource(b, v, NULL);
+							else
+								MapResource(b, v, NULL);
+							pack->obj[i] = &ResList[b][v];
+							pack->type[i] = b;
+							pack->ID[i] = v;
+							index += 3;
+						}
+						Package* package = new Package;
+						package->type = type;
+						package->ID = ID;
+						package->package = pack;
+						LoadPackage(package);
+					}
+					InterlockedDecrement(&pView->dwRef);
+				}
+				else
+				{
+					HANDLE hFile = CreateFile(TOFile[type].cName, GENERIC_READ, 1, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+					if (hFile == INVALID_HANDLE_VALUE)
+						throw 0;
+					SetFilePointer(hFile, offset, NULL, FILE_BEGIN);
+					BUFFER* buffer = new BUFFER(size);
+					ReadFile(hFile, buffer->pBase, size, NULL, NULL);
+					CloseHandle(hFile);
+					ResList[type][ID].loc = buffer;
+					ResList[type][ID].state = 4; //Mapped
 				}
 
 				delete pItem;
-				InterlockedDecrement(&pView->dwRef);
 				worker->pItem = NULL;
 				worker->pView = NULL;
 				worker->bDone = true;
@@ -570,7 +625,8 @@ namespace Jotunheimr
 					}
 					for (BYTE i = 0; i < count; i++)
 					{
-						if (obj[i]->state != 2) //Loaded
+						BYTE state = obj[i]->state;
+						if (state != 2 && state != 4) //Loaded && Mapped
 						{
 							queue = false;
 							break;
@@ -661,7 +717,7 @@ namespace Jotunheimr
 					pack->pack = fullpack;
 
 					ResList[package->type][package->ID].loc = pack;
-					ResList[package->type][package->ID].state = 2; //Loaded
+					ResList[package->type][package->ID].state += 1; //Loading -> Loaded || Mapping -> Mapped
 				}
 
 				delete package;
@@ -673,93 +729,6 @@ namespace Jotunheimr
 		{
 			CloseHandle(packer->hThread);
 			packer->hThread = NULL;
-		}
-	}
-
-	bool MapResource(int type, int ID, BUFFER** pObj)
-	{
-		Res* res = &ResList[type][ID];
-		if (res->state == 0) //Not active
-		{
-			//Hopefully, I don't have gigantic files over 64MB
-			DWORD length = ListSize[type][ID];
-			HANDLE hFile = TOFile[type].hFile;
-			SetFilePointer(hFile, length, NULL, FILE_BEGIN);
-			BUFFER* buffer = new BUFFER(length);
-			ReadFile(hFile, buffer->pBase, length, NULL, NULL);
-			res->loc = buffer;
-			res->state = 3; //Mapped
-		}
-		if (res->state == 3) //Mapped
-		{
-			if (pObj)
-				*pObj = (BUFFER*)res->loc;
-			return true;
-		}
-		return false;
-	}
-
-	void UnmapResource(int type, int ID)
-	{
-		Res* res = &ResList[type][ID];
-		if (res->loc && res->state == 3) //Mapped
-		{
-			delete (BUFFER*)res->loc; //Destructs the buffer
-			res->loc = NULL;
-			res->state = 0; //Not active
-		}
-	}
-
-	bool LoadSound(int ID, SOUND** pSound)
-	{
-		Res* res = &ResList[TO::SOUND][ID];
-		if (res->state == 0) //Not active
-		{
-			BUFFER* buffer;
-			MapResource(TO::SOUND, ID, &buffer);
-			char str[MAX_PATH];
-			sprintf(str, "temp\\%d_%d.tmp",TO::SOUND, ID);
-			FILE* file = fopen(str, "w+b");
-			fwrite(buffer->pBase, 1, buffer->dwSize, file);
-			rewind(file);
-			SOUND* sound = new SOUND(str);
-			if (ov_open_callbacks(file, sound->vf, NULL, 0, OV_CALLBACKS_DEFAULT) >= 0)
-			{
-				vorbis_info* vi = ov_info(sound->vf, -1);
-
-				sound->wfm.cbSize = sizeof(WAVEFORMATEX);
-				sound->wfm.nChannels = vi->channels;
-				sound->wfm.wBitsPerSample = 16; //OGG is always 16-bit
-				sound->wfm.nSamplesPerSec = vi->rate;
-				sound->wfm.nAvgBytesPerSec = vi->rate * vi->channels * 2;
-				sound->wfm.nBlockAlign = 2 * vi->channels;
-				sound->wfm.wFormatTag = 1;
-
-				delete vi;
-			}
-			UnmapResource(TO::SOUND, ID);
-			res->loc = sound;
-			res->state = 4; //Stream
-		}
-		if (res->state == 4) //Stream
-		{
-			if (pSound)
-				*pSound = (SOUND*)res->loc;
-			return true;
-		}
-	}
-
-	void UnloadSound(int ID)
-	{
-		Res* res = &ResList[TO::SOUND][ID];
-		if (res->loc && res->state == 4) //Stream
-		{
-			SOUND* sound = (SOUND*)res->loc;
-			ov_clear(sound->vf);
-			remove(sound->tmpname);
-			delete sound; //Destructs vf and tmpname
-			res->loc = NULL;
-			res->state = 0; //Not active
 		}
 	}
 }

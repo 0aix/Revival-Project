@@ -22,7 +22,7 @@ namespace Game
 
 		/////////////////////////////////
 
-		Cardinal::NextScene(new MainScene());
+		Cardinal::NextScene(new LoadScene());
 
 		/////////////////////////////////
 

@@ -1,10 +1,22 @@
 #ifndef AUDIO_H
 #define AUDIO_H
+#include <XAudio2.h>
 
 class Voice;
-struct IXAudio2;
-struct IXAudio2MasteringVoice;
-struct VoiceList;
+struct OggVorbis_File;
+struct BUFFER;
+
+struct RAWSOUND
+{
+	XAUDIO2_BUFFER buffer;
+	WAVEFORMATEX wfm;
+};
+
+struct SOUND
+{
+	OggVorbis_File* vf;
+	WAVEFORMATEX wfm;
+};
 
 namespace Audio
 {
@@ -12,6 +24,9 @@ namespace Audio
 	void Uninitialize();
 	void Update();
 	Voice* CreateVoice(int buCount = 3, int buSize = 655360);
+
+	RAWSOUND* LoadRawSound(BUFFER* buffer);
+	SOUND* LoadSound(BUFFER* buffer);
 };
 
 #endif
