@@ -5,9 +5,6 @@
 #include "Sprite.h"
 #include "TO.h"
 
-struct BUFFER;
-struct SOUND;
-
 namespace TO
 {
 	const BYTE SPRITE = 0x00;

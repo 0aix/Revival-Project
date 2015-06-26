@@ -2,9 +2,6 @@
 #include "Audio.h"
 #include "Graphics.h"
 #include "Buffer.h"
-#include <fstream>
-#include <vorbisfile.h>
-#include <XAudio2.h>
 
 namespace Jotunheimr
 {

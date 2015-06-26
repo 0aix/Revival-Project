@@ -1,14 +1,19 @@
 #include "Audio.h"
+#include "Sound.h"
 #include "Voice.h"
 #include <XAudio2.h>
-#include <codec.h>
 #include <vorbisfile.h>
+#include <mutex>
 
 namespace Audio
 {
 	IXAudio2* pXAudio2;
 	IXAudio2MasteringVoice* pMasteringVoice;
 	VoiceList* pVoiceBase;
+	RAWSFXList* pRAWSFXBase;
+	SoundList* pSoundBase;
+	std::mutex mtx1; //For RAWSFX
+	std::mutex mtx2; //For Sound
 
 	bool Initialize()
 	{
@@ -21,9 +26,8 @@ namespace Audio
 		if (FAILED(pXAudio2->CreateMasteringVoice(&pMasteringVoice)))
 			return false;
 
-		pVoiceBase = new VoiceList;
-		pVoiceBase->pVoice = NULL;
-		pVoiceBase->pNext = NULL;
+		pRAWSFXBase = new RAWSFXList;
+		pSoundBase = new SoundList;
 
 		return true;
 	}
@@ -43,10 +47,7 @@ namespace Audio
 			pMasteringVoice->DestroyVoice();
 
 		if (pXAudio2)
-		{
 			pXAudio2->Release();
-			pXAudio2 = NULL;
-		}
 
 		CoUninitialize();
 	}
@@ -84,7 +85,7 @@ namespace Audio
 		return temp;
 	}
 
-	RAWSOUND* LoadRawSound(BUFFER* buffer)
+	RAWSOUND* CreateRAWSOUND(BUFFER* buffer)
 	{
 		OggVorbis_File* vf = new OggVorbis_File;
 		if (ov_open_callbacks(buffer, vf, NULL, 0, OV_CALLBACKS_DEFAULT) < 0)
@@ -100,6 +101,8 @@ namespace Audio
 		raw->wfm.nBlockAlign = 2 * vi->channels;
 		raw->wfm.wFormatTag = 1;
 
+		delete vi;
+
 		DWORD length = (DWORD)ov_pcm_total(vf, -1) * vi->channels * 2;
 		DWORD pos = 0;
 		int sec = 0;
@@ -111,23 +114,43 @@ namespace Audio
 			ret = ov_read(vf, (char*)pBase + pos, length - pos, 0, 2, 1, &sec);
 			pos += ret;
 		}
-		delete vi;
 		ov_clear(vf);
 		delete vf;
 
 		raw->buffer.pAudioData = pBase;
 		raw->buffer.AudioBytes = length;
+		raw->buffer.Flags = XAUDIO2_END_OF_STREAM;
 		return raw;
 	}
 
-	SOUND* LoadSound(BUFFER* buffer)
+	RAWSFX* CreateRAWSFX(RAWSOUND* raw)
+	{
+		RAWSFX* sfx = new RAWSFX;
+		if (FAILED(pXAudio2->CreateSourceVoice(&sfx->pSourceVoice, &raw->wfm, 0, XAUDIO2_DEFAULT_FREQ_RATIO, sfx, NULL, NULL)) ||
+			FAILED(sfx->pSourceVoice->SubmitSourceBuffer(&raw->buffer)) ||
+			FAILED(sfx->pSourceVoice->Start()))
+		{
+			delete sfx;
+			return NULL;
+		}
+
+		mtx1.lock();
+		RAWSFXList* node = new RAWSFXList;
+		node->pRAWSFX = sfx;
+		node->pNext = pRAWSFXBase->pNext;
+		pRAWSFXBase->pNext = node;
+		mtx1.unlock();
+		return sfx;
+	}
+
+	Sound* CreateSound(BUFFER* buffer, bool loop)
 	{
 		OggVorbis_File* vf = new OggVorbis_File;
 		if (ov_open_callbacks(buffer, vf, NULL, 0, OV_CALLBACKS_DEFAULT) < 0)
 			return NULL;
 		vorbis_info* vi = ov_info(vf, -1);
 
-		SOUND* sound = new SOUND;
+		Sound* sound = new Sound(loop);
 		sound->vf = vf;
 		sound->wfm.cbSize = sizeof(WAVEFORMATEX);
 		sound->wfm.nChannels = vi->channels;
