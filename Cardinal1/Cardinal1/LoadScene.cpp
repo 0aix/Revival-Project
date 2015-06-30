@@ -7,7 +7,10 @@ LoadScene::LoadScene() : Scene()
 	Jotunheimr::MapResource(TO::PACK, TO::BGM_PACK, NULL);
 }
 
-void LoadScene::Release() {}
+void LoadScene::Release() 
+{
+	delete this;
+}
 
 void LoadScene::Update()
 {
@@ -21,6 +24,7 @@ void LoadScene::Update()
 		if (!Jotunheimr::MapResource(TO::PACK, TO::BGM_PACK, NULL))
 			return;
 		Cardinal::NextScene(new MainScene());
+		Release();
 	}
 }
 

@@ -15,7 +15,7 @@ namespace Cardinal
 	HWND hWnd;
 	mutex mtx;
 	const int STATE_COUNT = 1000;
-	const int BUFFER_SIZE = 32;
+	const int RAWINPUT_BUFFER_SIZE = 32;
 	int start = 0;
 	int end = 0;
 	
@@ -23,7 +23,7 @@ namespace Cardinal
 	{
 		pStates = new void*[STATE_COUNT];
 		pInput = new Input { 0 };
-		pBuffer = new RAWINPUT[BUFFER_SIZE];
+		pBuffer = new RAWINPUT[RAWINPUT_BUFFER_SIZE];
 		
 		hWnd = hwnd;
 		
@@ -38,11 +38,10 @@ namespace Cardinal
 
 	void Uninitialize()
 	{
-		Game::Uninitialize();
+		Game::Uninitialize(); //Releases pScene
 		Jotunheimr::Uninitialize();
 
 		delete pBuffer;
-		delete pScene;
 		delete pInput;
 		delete pStates;
 	}
@@ -84,13 +83,13 @@ namespace Cardinal
 		dwSize = sizeof(RAWINPUT);
 		GetRawInputData(handle, RID_INPUT, pBuffer + end, (PUINT)&dwSize, sizeof(RAWINPUTHEADER));
 		end++;
-		if (end == BUFFER_SIZE)
+		if (end == RAWINPUT_BUFFER_SIZE)
 			end = 0;
 		if (end == start) //stupid fix; rewrites last input if overloading
 		{
 			end--;
 			if (end == -1)
-				end = BUFFER_SIZE - 1;
+				end = RAWINPUT_BUFFER_SIZE - 1;
 		}
 	}
 
@@ -158,7 +157,7 @@ namespace Cardinal
 				}
 			}
 			start++;
-			if (start == BUFFER_SIZE)
+			if (start == RAWINPUT_BUFFER_SIZE)
 				start = 0;
 		}
 		pScene->HandleInput();
@@ -177,15 +176,24 @@ namespace Cardinal
 	void UpdateScene()
 	{
 		mtx.lock();
+
 		HandleBufferedInput();
 		pScene->Update();
+
 		mtx.unlock();
 	}
 
 	void RenderScene()
 	{
 		mtx.lock();
+
 		pScene->Render();
+
 		mtx.unlock();
+	}
+
+	void ReleaseScene()
+	{
+		pScene->Release();
 	}
 }

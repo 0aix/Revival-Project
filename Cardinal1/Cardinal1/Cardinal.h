@@ -27,6 +27,7 @@ namespace Cardinal
 	void NextScene(Scene* ps);
 	void UpdateScene();
 	void RenderScene();
+	void ReleaseScene();
 }
 
 #endif

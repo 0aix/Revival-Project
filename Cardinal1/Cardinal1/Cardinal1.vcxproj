@@ -88,7 +88,6 @@
     <ClCompile Include="Sound.cpp" />
     <ClCompile Include="UIScene.cpp" />
     <ClCompile Include="View.cpp" />
-    <ClCompile Include="Voice.cpp" />
     <ClCompile Include="Warrior.cpp" />
     <ClCompile Include="World.cpp" />
     <ClCompile Include="WorldScene.cpp" />
@@ -109,7 +108,6 @@
     <ClInclude Include="Subscene.h" />
     <ClInclude Include="TO.h" />
     <ClInclude Include="View.h" />
-    <ClInclude Include="Voice.h" />
     <ClInclude Include="World.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -3,8 +3,6 @@
 #include "Graphics.h"
 #include "Scene.h"
 
-#include "Voice.h"
-
 namespace Game
 {
 	HANDLE audio;
@@ -44,6 +42,8 @@ namespace Game
 		CloseHandle(update);
 		CloseHandle(render);
 
+		Cardinal::ReleaseScene();
+		Audio::Uninitialize();
 		Graphics::Uninitialize();
 	}
 

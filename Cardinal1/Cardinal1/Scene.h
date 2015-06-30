@@ -4,6 +4,7 @@
 #include <fstream>
 #include "Main.h"
 #include "Misc.h"
+#include "Audio.h"
 #include "Graphics.h"
 
 class Subscene;
@@ -43,7 +44,8 @@ public:
 
 private:
 	ViewManager* VM;
-
+	Sound* pSounds[3];
+	Voice* pVoice;
 };
 
 class LoadScene : public Scene

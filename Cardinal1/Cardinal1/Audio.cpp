@@ -1,19 +1,13 @@
 #include "Audio.h"
-#include "Sound.h"
-#include "Voice.h"
-#include <XAudio2.h>
-#include <vorbisfile.h>
-#include <mutex>
 
 namespace Audio
 {
 	IXAudio2* pXAudio2;
 	IXAudio2MasteringVoice* pMasteringVoice;
-	VoiceList* pVoiceBase;
 	RAWSFXList* pRAWSFXBase;
-	SoundList* pSoundBase;
+	VoiceList* pVoiceBase;
 	std::mutex mtx1; //For RAWSFX
-	std::mutex mtx2; //For Sound
+	std::mutex mtx2; //For Voice
 
 	bool Initialize()
 	{
@@ -27,21 +21,39 @@ namespace Audio
 			return false;
 
 		pRAWSFXBase = new RAWSFXList;
-		pSoundBase = new SoundList;
+		pVoiceBase = new VoiceList;
 
 		return true;
 	}
 
 	void Uninitialize()
 	{
-		VoiceList* temp = NULL;;
-		while (pVoiceBase != NULL)
+		RAWSFXList* curr1 = pRAWSFXBase->pNext;
+		RAWSFXList* temp1;
+		mtx1.lock();
+		while (curr1 != NULL)
 		{
-			temp = pVoiceBase;
-			pVoiceBase = pVoiceBase->pNext;
-			delete temp->pVoice;
-			delete temp;
+			temp1 = curr1;
+			curr1 = curr1->pNext;
+			temp1->pRAWSFX->Kill();
+			delete temp1->pRAWSFX;
+			delete temp1;
 		}
+		delete pRAWSFXBase;
+		mtx1.unlock();
+
+		VoiceList* curr2 = pVoiceBase->pNext;
+		VoiceList* temp2;
+		mtx2.lock();
+		while (curr2 != NULL)
+		{
+			temp2 = curr2;
+			curr2 = curr2->pNext;
+			delete temp2->pVoice;
+			delete temp2;
+		}
+		delete pVoiceBase;
+		mtx2.unlock();
 
 		if (pMasteringVoice)
 			pMasteringVoice->DestroyVoice();
@@ -52,37 +64,54 @@ namespace Audio
 		CoUninitialize();
 	}
 
-	void Update() //Needs a mutex here and for createvoice
+	void Update()
 	{
-		//pVoiceBase is only a start node
-		VoiceList* prev = pVoiceBase;
-		VoiceList* curr = pVoiceBase->pNext;
-		while (curr != NULL) //iterate through list; remove and free up voices not in use
+		//pRAWSFX is a start node
+		RAWSFXList* prev1 = pRAWSFXBase;
+		RAWSFXList* curr1 = pRAWSFXBase->pNext;
+
+		mtx1.lock();
+
+		while (curr1 != NULL) //iterate through list; remove and free up voices that have exited
 		{
-			Voice* temp = curr->pVoice;
-			if (temp->bInUse)
+			RAWSFX* pRAWSFX = curr1->pRAWSFX;
+			if (pRAWSFX->bDone)
 			{
-				temp->Update();
-				prev = curr;
-				curr = curr->pNext;
+				prev1->pNext = curr1->pNext;
+				delete pRAWSFX;
+				delete curr1;
+				curr1 = prev1->pNext;
+			}
+		}
+
+		mtx1.unlock();
+
+		//pVoiceBase is a start node
+		VoiceList* prev2 = pVoiceBase;
+		VoiceList* curr2 = pVoiceBase->pNext;
+
+		mtx2.lock();
+
+		while (curr2 != NULL) //iterate through list; remove and free up voices that have exited
+		{
+			Voice* pVoice = curr2->pVoice;
+			if (pVoice->bRunning)
+				pVoice->Stream();
+			if (!pVoice->bExit)
+			{
+				prev2 = curr2;
+				curr2 = curr2->pNext;
 			}
 			else
 			{
-				prev->pNext = curr->pNext;
-				delete curr;
-				curr = prev->pNext;
+				prev2->pNext = curr2->pNext;
+				delete pVoice;
+				delete curr2;
+				curr2 = prev2->pNext;
 			}
 		}
-	}
-
-	Voice* CreateVoice(int buCount, int buSize)
-	{
-		Voice* temp = new Voice(pXAudio2, buCount, buSize);
-		VoiceList* node = new VoiceList;
-		node->pVoice = temp;
-		node->pNext = pVoiceBase->pNext;
-		pVoiceBase->pNext = node;
-		return temp;
+		
+		mtx2.unlock();
 	}
 
 	RAWSOUND* CreateRAWSOUND(BUFFER* buffer)
@@ -100,8 +129,6 @@ namespace Audio
 		raw->wfm.nAvgBytesPerSec = vi->rate * vi->channels * 2;
 		raw->wfm.nBlockAlign = 2 * vi->channels;
 		raw->wfm.wFormatTag = 1;
-
-		delete vi;
 
 		DWORD length = (DWORD)ov_pcm_total(vf, -1) * vi->channels * 2;
 		DWORD pos = 0;
@@ -123,7 +150,7 @@ namespace Audio
 		return raw;
 	}
 
-	RAWSFX* CreateRAWSFX(RAWSOUND* raw)
+	RAWSFX* PlayRAWSFX(RAWSOUND* raw)
 	{
 		RAWSFX* sfx = new RAWSFX;
 		if (FAILED(pXAudio2->CreateSourceVoice(&sfx->pSourceVoice, &raw->wfm, 0, XAUDIO2_DEFAULT_FREQ_RATIO, sfx, NULL, NULL)) ||
@@ -135,23 +162,27 @@ namespace Audio
 		}
 
 		mtx1.lock();
+
 		RAWSFXList* node = new RAWSFXList;
 		node->pRAWSFX = sfx;
 		node->pNext = pRAWSFXBase->pNext;
 		pRAWSFXBase->pNext = node;
+
 		mtx1.unlock();
 		return sfx;
 	}
 
-	Sound* CreateSound(BUFFER* buffer, bool loop)
+	Sound* CreateSound(BUFFER* buffer)
 	{
-		OggVorbis_File* vf = new OggVorbis_File;
-		if (ov_open_callbacks(buffer, vf, NULL, 0, OV_CALLBACKS_DEFAULT) < 0)
+		Sound* sound = new Sound;
+		sound->vf = new OggVorbis_File;
+		if (ov_open_callbacks(buffer, sound->vf, NULL, 0, BUFFER::OV_CALLBACKS_BUFFER) < 0)
+		{
+			delete sound;
 			return NULL;
-		vorbis_info* vi = ov_info(vf, -1);
-
-		Sound* sound = new Sound(loop);
-		sound->vf = vf;
+		}
+		vorbis_info* vi = ov_info(sound->vf, -1);
+		
 		sound->wfm.cbSize = sizeof(WAVEFORMATEX);
 		sound->wfm.nChannels = vi->channels;
 		sound->wfm.wBitsPerSample = 16; //OGG is always 16-bit
@@ -160,7 +191,20 @@ namespace Audio
 		sound->wfm.nBlockAlign = 2 * vi->channels;
 		sound->wfm.wFormatTag = 1;
 
-		delete vi;
 		return sound;
+	}
+
+	Voice* CreateVoice()
+	{
+		mtx2.lock();
+
+		Voice* voice = new Voice(pXAudio2);
+		VoiceList* node = new VoiceList;
+		node->pVoice = voice;
+		node->pNext = pVoiceBase->pNext;
+		pVoiceBase->pNext = node;
+
+		mtx2.unlock();
+		return voice;
 	}
 }

@@ -1,16 +1,31 @@
-#include "Scene.h"
-#include "Subscene.h"
+#include "Subscene.h" //#include "Scene.h"
 
 MainScene::MainScene() : Scene()
 {
 	pScenes = new Subscene*[2];
 	pScenes[0] = new BattleScene();
 	pScenes[1] = new UIScene(VM);
+	Pack* pack;
+	Jotunheimr::MapResource(TO::PACK, TO::BGM_PACK, (void**)&pack);
+	pVoice = Audio::CreateVoice();
+	for (int i = 0; i < 3; i++)
+	{
+		pSounds[i] = Audio::CreateSound((BUFFER*)(pack->pack[i]));
+		pVoice->Queue(pSounds[i]);
+	}
+	pVoice->Loop();
+	pVoice->Start();
 }
 
 void MainScene::Release()
 {
-
+	pScenes[0]->Release();
+	pScenes[1]->Release();
+	if (pVoice)
+		pVoice->Destroy();
+	for (int i = 0; i < 3; i++)
+		delete pSounds[i];
+	Jotunheimr::UnmapResource(TO::PACK, TO::BGM_PACK);
 	delete this;
 }
 

@@ -107,8 +107,13 @@ namespace Jotunheimr
 		for (int i = 0; i < TABLE_COUNT; i++)
 		{
 			for (DWORD n = 0; n < ItemCount[i]; n++)
-				if (ResList[i][n].state == 2)
+			{
+				BYTE state = ResList[i][n].state;
+				if (state == 2)
 					UnloadResource(i, n);
+				else if (state == 4)
+					UnmapResource(i, n);
+			}
 
 			delete[] ListSize[i];
 			delete[] ListOffset[i];
@@ -258,7 +263,9 @@ namespace Jotunheimr
 			Item* item = new Item;
 			item->type = type;
 			item->ID = ID;
+
 			manager.mtx.lock();
+
 			if (!manager.hThread)
 				manager.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ManagerThread, NULL, 0, NULL);
 			Item* end = manager.pEnd;
@@ -266,6 +273,7 @@ namespace Jotunheimr
 			item->pNext = end;
 			end->pNext = item;
 			res->state = 1; //Loading
+
 			manager.mtx.unlock();
 		}
 		return false;
@@ -320,7 +328,9 @@ namespace Jotunheimr
 			Item* item = new Item;
 			item->type = type;
 			item->ID = ID;
+
 			manager.mtx.lock();
+
 			if (!manager.hThread)
 				manager.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ManagerThread, NULL, 0, NULL);
 			Item* end = manager.pEnd;
@@ -328,6 +338,7 @@ namespace Jotunheimr
 			item->pNext = end;
 			end->pNext = item;
 			res->state = 3; //Mapping
+
 			manager.mtx.unlock();
 		}
 		return false;
@@ -341,11 +352,11 @@ namespace Jotunheimr
 			if (type == TO::PACK) //Unmap resources in pack
 			{
 				Pack* pack = (Pack*)res->loc;
-				BYTE* type = pack->type;
-				WORD* ID = pack->ID;
+				BYTE* types = pack->type;
+				WORD* IDs = pack->ID;
 				BYTE count = pack->count;
 				for (BYTE i = 0; i < count; i++)
-					UnmapResource(type[i], ID[i]);
+					UnmapResource(types[i], IDs[i]);
 				delete pack;
 			}
 			else //everything else
@@ -353,9 +364,9 @@ namespace Jotunheimr
 				BUFFER* buffer = (BUFFER*)res->loc;
 				delete[] buffer->pBase;
 				delete buffer;
-				res->loc = NULL;
-				res->state = 0; //Not active
 			}
+			res->loc = NULL;
+			res->state = 0; //Not active
 		}
 	}
 
@@ -379,6 +390,7 @@ namespace Jotunheimr
 					if (worker[i].bDone && curr != end)
 					{
 						manager.mtx.lock();
+
 						BYTE type = curr->type;
 						WORD ID = curr->ID;
 						DWORD itemsize = ListSize[type][ID];
@@ -442,6 +454,7 @@ namespace Jotunheimr
 						base->pNext = curr;
 						if (curr == end)
 							end->pNext = base;
+
 						manager.mtx.unlock();
 					}
 				}
@@ -491,7 +504,7 @@ namespace Jotunheimr
 						BUFFER* buffer = new BUFFER;
 						buffer->pBase = base;
 						buffer->dwSize = size;
-						RAWSOUND* raw = Audio::LoadRawSound(buffer);
+						RAWSOUND* raw = Audio::CreateRAWSOUND(buffer);
 						if (!raw)
 							throw 0;
 						delete buffer;
@@ -583,12 +596,14 @@ namespace Jotunheimr
 	void LoadPackage(Package* package)
 	{
 		checker.mtx.lock();
+
 		if (!checker.hThread)
 			checker.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CheckerThread, NULL, 0, NULL);
 		Package* end = checker.pEnd;
 		end->pNext->pNext = package;
 		package->pNext = end;
 		end->pNext = package;
+
 		checker.mtx.unlock();
 	}
 
@@ -601,6 +616,7 @@ namespace Jotunheimr
 			for (; !bExit; Sleep(500))
 			{
 				checker.mtx.lock();
+
 				Package* curr = base->pNext;
 				Package* prev = base;
 				while (curr != end)
@@ -656,6 +672,7 @@ namespace Jotunheimr
 					prev = curr;
 					curr = curr->pNext;
 				}
+
 				checker.mtx.unlock();
 			}
 		}

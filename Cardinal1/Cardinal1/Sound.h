@@ -1,11 +1,12 @@
 #ifndef SOUND_H
 #define SOUND_H
 #include <XAudio2.h>
+#include <mutex>
+#include <vorbisfile.h>
 
-#define BUFFER_COUNT 3
-#define BUFFER_SIZE 65536
+#define VOICE_BUFFER_COUNT 3
+#define VOICE_BUFFER_SIZE 65536
 
-struct OggVorbis_File;
 
 struct RAWSOUND
 {
@@ -31,14 +32,14 @@ public:
 	}
 
 	//IXAudio2VoiceCallback
-	void OnStreamEnd() { Kill(); }
+	void __stdcall OnStreamEnd() { Kill(); }
 
-	void OnVoiceProcessingPassEnd() {}
-	void OnVoiceProcessingPassStart(UINT32 SamplesRequired) {}
-	void OnBufferEnd(void* pBufferContext) {}
-	void OnBufferStart(void* pBufferContext) {}
-	void OnLoopEnd(void* pBufferContext) {}
-	void OnVoiceError(void* pBufferContext, HRESULT Error) {}
+	void __stdcall OnVoiceProcessingPassEnd() {}
+	void __stdcall OnVoiceProcessingPassStart(UINT32 SamplesRequired) {}
+	void __stdcall OnBufferEnd(void* pBufferContext) {}
+	void __stdcall OnBufferStart(void* pBufferContext) {}
+	void __stdcall OnLoopEnd(void* pBufferContext) {}
+	void __stdcall OnVoiceError(void* pBufferContext, HRESULT Error) {}
 };
 
 struct RAWSFXList
@@ -47,28 +48,79 @@ struct RAWSFXList
 	RAWSFXList* pNext = NULL;
 };
 
-class Sound
+struct Sound
 {
-public:
 	OggVorbis_File* vf;
 	WAVEFORMATEX wfm;
-	IXAudio2SourceVoice* pSourceVoice = NULL;
-	BYTE buffers[BUFFER_COUNT][BUFFER_SIZE];
 
-	Sound(bool loop) { bLoop = loop; }
-	~Sound();
-
-	void Start();
-	void Stop();
-
-private:
-	bool bLoop = false;
+	~Sound() 
+	{ 
+		if (!vf)
+			ov_clear(vf); 
+	}
 };
 
 struct SoundList
 {
 	Sound* pSound = NULL;
 	SoundList* pNext = NULL;
+};
+
+class Voice : public IXAudio2VoiceCallback //ver 1 no error-checking
+{
+public:
+	Voice(IXAudio2* pAudio) { pXAudio2 = pAudio; }
+	~Voice();
+	void Start();
+	void Pause();
+	void Stop();
+	void Loop();
+
+	void Queue(Sound* pSound);
+	void Next();
+	void Stream();
+	void Destroy();
+
+	void SetVolume(float volume);
+	float GetVolume();
+
+	//IXAudio2VoiceCallback
+	void __stdcall OnStreamEnd()
+	{
+		Stop();
+		Next();
+		Start();
+	}
+
+	void __stdcall OnVoiceProcessingPassEnd() {}
+	void __stdcall OnVoiceProcessingPassStart(UINT32 SamplesRequired) {}
+	void __stdcall OnBufferEnd(void* pBufferContext) {}
+	void __stdcall OnBufferStart(void* pBufferContext) {}
+	void __stdcall OnLoopEnd(void* pBufferContext) {}
+	void __stdcall OnVoiceError(void* pBufferContext, HRESULT Error) {}
+
+	//
+	IXAudio2SourceVoice* pSourceVoice = NULL;
+	bool bPaused = false;
+	bool bRunning = false;
+	bool bExit = false;
+
+private:
+	std::mutex mtx;
+	IXAudio2* pXAudio2;
+	SoundList* pSoundFirst = NULL;
+	SoundList* pSoundLast = NULL;
+	BYTE buffers[VOICE_BUFFER_COUNT][VOICE_BUFFER_SIZE];
+	BYTE currentBuffer = 0;
+	bool bDone = false;
+	bool bLoop = false;
+
+};
+
+struct VoiceList
+{
+	Voice* pVoice = NULL;
+	VoiceList* pNext = NULL;
 };
 
 #endif

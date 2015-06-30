@@ -14,9 +14,10 @@ BattleScene::BattleScene() : Subscene()
 
 void BattleScene::Release()
 {
+	pScenes[0]->Release();
+	pScenes[1]->Release();
 	Jotunheimr::UnloadResource(TO::PACK, TO::TILE_PACK);
 	Jotunheimr::UnloadResource(TO::PACK, TO::WARRIOR_PACK);
-	Jotunheimr::UnmapResource(TO::PACK, TO::BGM_PACK);
 	delete this;
 }
 

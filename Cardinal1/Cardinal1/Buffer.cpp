@@ -4,8 +4,8 @@ ov_callbacks BUFFER::OV_CALLBACKS_BUFFER =
 {
 	(size_t(*)(void*, size_t, size_t, void*))read,
 	(int(*)(void*, ogg_int64_t, int))seek,
-	NULL, //no close
-	//(int(*)(void*))close,
+	//NULL, //no close
+	(int(*)(void*))close,
 	(long(*)(void*))tell
 };
 

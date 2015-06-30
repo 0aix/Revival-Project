@@ -1,11 +1,7 @@
 #ifndef AUDIO_H
 #define AUDIO_H
-
-struct BUFFER;
-struct RAWSOUND;
-struct RAWSFX;
-class Sound;
-class Voice;
+#include "Sound.h"
+#include "Buffer.h"
 
 namespace Audio
 {
@@ -13,12 +9,10 @@ namespace Audio
 	void Uninitialize();
 	void Update();
 
-	Voice* CreateVoice(int buCount, int buSize);
-
 	RAWSOUND* CreateRAWSOUND(BUFFER* buffer);
-	RAWSFX* CreateRAWSFX(RAWSOUND* raw);
-
-	Sound* CreateSound(BUFFER* buffer, bool loop);
+	RAWSFX* PlayRAWSFX(RAWSOUND* raw);
+	Sound* CreateSound(BUFFER* buffer);
+	Voice* CreateVoice();
 };
 
 #endif
