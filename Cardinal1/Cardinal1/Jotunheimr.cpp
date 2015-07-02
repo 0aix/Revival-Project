@@ -213,17 +213,18 @@ namespace Jotunheimr
 
 		//Check header and version
 		char buffer[4];
-		if (!ReadFile(hFile, buffer, 4, NULL, NULL))
+		DWORD read;
+		if (!ReadFile(hFile, buffer, 4, &read, NULL))
 			return false;
 		if (memcmp(HEADER, buffer, 4) != 0)
 			return false;
-		if (!ReadFile(hFile, buffer, 1, NULL, NULL))
+		if (!ReadFile(hFile, buffer, 1, &read, NULL))
 			return false;
 		if (*(BYTE*)buffer != VERSION)
 			return false;
 
 		//Check table type
-		if (!ReadFile(hFile, buffer, 3, NULL, NULL))
+		if (!ReadFile(hFile, buffer, 3, &read, NULL))
 			return false;
 		if (*(BYTE*)buffer != type)
 			return false;
@@ -574,7 +575,8 @@ namespace Jotunheimr
 						throw 0;
 					SetFilePointer(hFile, offset, NULL, FILE_BEGIN);
 					BUFFER* buffer = new BUFFER(size);
-					ReadFile(hFile, buffer->pBase, size, NULL, NULL);
+					DWORD read;
+					ReadFile(hFile, buffer->pBase, size, &read, NULL);
 					CloseHandle(hFile);
 					ResList[type][ID].loc = buffer;
 					ResList[type][ID].state = 4; //Mapped
