@@ -121,6 +121,7 @@ struct Item
 struct Manager
 {
 	HANDLE hThread;
+	HANDLE hEvent;
 	Item* pBase;
 	Item* pEnd;
 	FILEVIEW* fView[5];
@@ -129,6 +130,7 @@ struct Manager
 
 	Manager()
 	{
+		hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 		pBase = new Item;
 		pEnd = new Item;
 		pBase->pNext = pEnd;
@@ -147,6 +149,7 @@ struct Manager
 		}
 		delete pBase;
 		delete pEnd;
+		CloseHandle(hEvent);
 		CloseHandle(hThread);
 	}
 };
@@ -159,7 +162,7 @@ struct Worker
 	FILEVIEW* pView = NULL;
 	bool bDone = true;
 
-	Worker(){ hEvent = CreateEvent(NULL, TRUE, FALSE, NULL); }
+	Worker(){ hEvent = CreateEvent(NULL, FALSE, FALSE, NULL); }
 
 	~Worker()
 	{
@@ -179,12 +182,14 @@ struct Package
 struct Checker
 {
 	HANDLE hThread;
+	HANDLE hEvent;
 	Package* pBase;
 	Package* pEnd;
 	mutex mtx;
 
 	Checker()
 	{
+		hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 		pBase = new Package;
 		pEnd = new Package;
 		pBase->pNext = pEnd;
@@ -203,6 +208,7 @@ struct Checker
 		}
 		delete pBase;
 		delete pEnd;
+		CloseHandle(hEvent);
 		CloseHandle(hThread);
 	}
 };
@@ -214,7 +220,7 @@ struct Packer
 	Package* package = NULL;
 	bool bDone = true;
 
-	Packer() { hEvent = CreateEvent(NULL, TRUE, FALSE, NULL); }
+	Packer() { hEvent = CreateEvent(NULL, FALSE, FALSE, NULL); }
 
 	~Packer()
 	{

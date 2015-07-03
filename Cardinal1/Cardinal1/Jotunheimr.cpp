@@ -89,6 +89,7 @@ namespace Jotunheimr
 			SetEvent(worker[i].hEvent);
 			WaitForSingleObject(worker[i].hThread, INFINITE);
 		}
+		SetEvent(manager.hEvent);
 		WaitForSingleObject(manager.hThread, INFINITE);
 
 		for (int i = 0; i < PACKER_COUNT; i++)
@@ -96,6 +97,7 @@ namespace Jotunheimr
 			SetEvent(packer[i].hEvent);
 			WaitForSingleObject(packer[i].hThread, INFINITE);
 		}
+		SetEvent(checker.hEvent);
 		WaitForSingleObject(checker.hThread, INFINITE);
 
 		for (int i = 0; i < TABLE_COUNT; i++)
@@ -267,13 +269,15 @@ namespace Jotunheimr
 
 			manager.mtx.lock();
 
-			if (!manager.hThread)
-				manager.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ManagerThread, NULL, 0, NULL);
 			Item* end = manager.pEnd;
 			end->pNext->pNext = item;
 			item->pNext = end;
 			end->pNext = item;
 			res->state = 1; //Loading
+
+			if (!manager.hThread)
+				manager.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ManagerThread, NULL, 0, NULL);
+			SetEvent(manager.hEvent);
 
 			manager.mtx.unlock();
 		}
@@ -332,13 +336,15 @@ namespace Jotunheimr
 
 			manager.mtx.lock();
 
-			if (!manager.hThread)
-				manager.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ManagerThread, NULL, 0, NULL);
 			Item* end = manager.pEnd;
 			end->pNext->pNext = item;
 			item->pNext = end;
 			end->pNext = item;
 			res->state = 3; //Mapping
+
+			if (!manager.hThread)
+				manager.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ManagerThread, NULL, 0, NULL);
+			SetEvent(manager.hEvent);
 
 			manager.mtx.unlock();
 		}
@@ -377,10 +383,15 @@ namespace Jotunheimr
 		Item* end = manager.pEnd;
 		try
 		{
-			for (; !bExit; Sleep(500))
+			while (!bExit)
 			{
+				if (WaitForSingleObject(manager.hEvent, INFINITE) != WAIT_OBJECT_0)
+					throw 0;
+
+				manager.mtx.lock();
 				Item* curr = base->pNext;
-				for (int i = 0; curr != end; i = (i + 1) % WORKER_COUNT)
+				manager.mtx.unlock();
+				for (int i = 0; curr != end; i = (i + 1) % WORKER_COUNT, Sleep(1))
 				{
 					if (!worker[i].hThread)
 					{
@@ -388,15 +399,13 @@ namespace Jotunheimr
 						worker[i].bDone = worker[i].pItem == NULL;
 						worker[i].hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)WorkerThread, (worker + i), 0, NULL);
 					}
-					if (worker[i].bDone && curr != end)
+					if (worker[i].bDone)
 					{
-						manager.mtx.lock();
-
 						BYTE type = curr->type;
 						WORD ID = curr->ID;
 						DWORD itemsize = ListSize[type][ID];
 						DWORD itemoffset = ListOffset[type][ID];
-						if (ResList[type][ID].state == 1 || type == TO::PACK) //Loading || pack
+						if (ResList[type][ID].state == 1 || type == TO::PACK) //Loading || Pack
 						{
 							FILEVIEW* fView = manager.fView[type];
 							FILEVIEW* prev = NULL;
@@ -413,13 +422,15 @@ namespace Jotunheimr
 								}
 								if (manager.fViewSize[i] > VIEW_SIZE_LIMIT && fView->dwRef == 0)
 								{
+									FILEVIEW* temp = fView->pNext;
 									if (prev)
-										prev->pNext = fView->pNext;
+										prev->pNext = temp;
 									else
-										manager.fView[type] = fView->pNext;
+										manager.fView[type] = temp;
+									manager.fViewSize[i] -= (fView->dwSize - fView->dwOffset);
 									UnmapViewOfFile(fView->pBase);
 									delete fView;
-									fView = prev->pNext;
+									fView = temp;
 									continue;
 								}
 								prev = fView;
@@ -438,18 +449,19 @@ namespace Jotunheimr
 								pView->dwRef = 1;
 								pView->pNext = manager.fView[type];
 								manager.fView[type] = pView;
+								manager.fViewSize[i] += page_end - page_offset;
 
 								worker[i].pItem = curr;
 								worker[i].pView = pView;
 							}
 						}
-						else //if (ResList[type][ID].state == 3) //Mapping
+						else if (ResList[type][ID].state == 3) //Mapping
 						{
 							worker[i].pItem = curr;
 							worker[i].pView = NULL;
 						}
-						worker[i].bDone = false;
-						SetEvent(worker[i].hEvent);
+
+						manager.mtx.lock();
 
 						curr = curr->pNext;
 						base->pNext = curr;
@@ -457,6 +469,9 @@ namespace Jotunheimr
 							end->pNext = base;
 
 						manager.mtx.unlock();
+
+						worker[i].bDone = false;
+						SetEvent(worker[i].hEvent);
 					}
 				}
 			}
@@ -477,109 +492,109 @@ namespace Jotunheimr
 			while (!bExit)
 			{
 				if (worker->bDone)
-				{
 					if (WaitForSingleObject(worker->hEvent, INFINITE) != WAIT_OBJECT_0)
 						throw 0;
-					ResetEvent(worker->hEvent);
-					continue;
-				}
 				
 				Item* pItem = worker->pItem;
-				FILEVIEW* pView = worker->pView;
-				WORD type = pItem->type;
-				WORD ID = pItem->ID;
-				DWORD offset = ListOffset[type][ID];
-				DWORD size = ListSize[type][ID];
-				if (pView != NULL)
+				if (pItem != NULL)
 				{
-					BYTE* base = pView->pBase + (offset - pView->dwOffset);
-					if (type == TO::SPRITE)
+					FILEVIEW* pView = worker->pView;
+					WORD type = pItem->type;
+					WORD ID = pItem->ID;
+					DWORD offset = ListOffset[type][ID];
+					DWORD size = ListSize[type][ID];
+					if (pView != NULL)
 					{
-						IDirect3DTexture9* texture;
-						D3DXCreateTextureFromFileInMemory(Graphics::d3ddev, base, size, &texture);
-						ResList[type][ID].loc = texture;
-						ResList[type][ID].state = 2; //Loaded
+						BYTE* base = pView->pBase + (offset - pView->dwOffset);
+						if (type == TO::SPRITE)
+						{
+							IDirect3DTexture9* texture;
+							if (D3DXCreateTextureFromFileInMemory(Graphics::d3ddev, base, size, &texture) != D3D_OK)
+								throw 0;
+							ResList[type][ID].loc = texture;
+							ResList[type][ID].state = 2; //Loaded
+						}
+						else if (type == TO::SOUND)
+						{
+							BUFFER* buffer = new BUFFER;
+							buffer->pBase = base;
+							buffer->dwSize = size;
+							RAWSOUND* raw = Audio::CreateRAWSOUND(buffer);
+							if (!raw)
+								throw 0;
+							delete buffer;
+							ResList[type][ID].loc = raw;
+							ResList[type][ID].state = 2; //Loaded
+						}
+						else if (type == TO::STRING)
+						{
+							STRING* str = new STRING(size);
+							memcpy(str->cstr, base, size);
+							ResList[type][ID].loc = str;
+							ResList[type][ID].state = 2; //Loaded
+						}
+						else if (type == TO::ANIM)
+						{
+							BYTE count = *base;
+							Anim* anim = new Anim(count, *(base + 1)); //The dereference is for loops
+							DWORD index = 2; //Offset for frames
+							for (BYTE i = 0; i < count; i++)
+							{
+								WORD v = *(WORD*)(base + index);
+								LoadResource(TO::SPRITE, v, NULL);
+								anim->obj[i] = &ResList[TO::SPRITE][v];
+								anim->frame[i].ID = v;
+								anim->frame[i].x = *(WORD*)(base + index + 2);
+								anim->frame[i].y = *(WORD*)(base + index + 4);
+								anim->frame[i].delay = *(WORD*)(base + index + 6);
+								index += 8;
+							}
+							Package* package = new Package;
+							package->type = type;
+							package->ID = ID;
+							package->package = anim;
+							LoadPackage(package);
+						}
+						else if (type == TO::PACK)
+						{
+							BYTE count = *base;
+							Pack* pack = new Pack(count);
+							DWORD index = 1; //Offset for items
+							bool map = ResList[type][ID].state == 3; //Mapping
+							for (BYTE i = 0; i < count; i++)
+							{
+								BYTE b = *(base + index);
+								WORD v = *(WORD*)(base + index + 1);
+								if (!map)
+									LoadResource(b, v, NULL);
+								else
+									MapResource(b, v, NULL);
+								pack->obj[i] = &ResList[b][v];
+								pack->type[i] = b;
+								pack->ID[i] = v;
+								index += 3;
+							}
+							Package* package = new Package;
+							package->type = type;
+							package->ID = ID;
+							package->package = pack;
+							LoadPackage(package);
+						}
+						InterlockedDecrement(&pView->dwRef);
 					}
-					else if (type == TO::SOUND)
+					else
 					{
-						BUFFER* buffer = new BUFFER;
-						buffer->pBase = base;
-						buffer->dwSize = size;
-						RAWSOUND* raw = Audio::CreateRAWSOUND(buffer);
-						if (!raw)
+						HANDLE hFile = CreateFile(TOFile[type].cName, GENERIC_READ, 1, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+						if (hFile == INVALID_HANDLE_VALUE)
 							throw 0;
-						delete buffer;
-						ResList[type][ID].loc = raw;
-						ResList[type][ID].state = 2; //Loaded
+						SetFilePointer(hFile, offset, NULL, FILE_BEGIN);
+						BUFFER* buffer = new BUFFER(size);
+						DWORD read;
+						ReadFile(hFile, buffer->pBase, size, &read, NULL);
+						CloseHandle(hFile);
+						ResList[type][ID].loc = buffer;
+						ResList[type][ID].state = 4; //Mapped
 					}
-					else if (type == TO::STRING)
-					{
-						STRING* str = new STRING(size);
-						memcpy(str->cstr, base, size);
-						ResList[type][ID].loc = str;
-						ResList[type][ID].state = 2; //Loaded
-					}
-					else if (type == TO::ANIM)
-					{
-						BYTE count = *base;
-						Anim* anim = new Anim(count, *(base + 1)); //The dereference is for loops
-						DWORD index = 2; //Offset for frames
-						for (BYTE i = 0; i < count; i++)
-						{
-							WORD v = *(WORD*)(base + index);
-							LoadResource(TO::SPRITE, v, NULL);
-							anim->obj[i] = &ResList[TO::SPRITE][v];
-							anim->frame[i].ID = v;
-							anim->frame[i].x = *(WORD*)(base + index + 2);
-							anim->frame[i].y = *(WORD*)(base + index + 4);
-							anim->frame[i].delay = *(WORD*)(base + index + 6);
-							index += 8;
-						}
-						Package* package = new Package;
-						package->type = type;
-						package->ID = ID;
-						package->package = anim;
-						LoadPackage(package);
-					}
-					else if (type == TO::PACK)
-					{
-						BYTE count = *base;
-						Pack* pack = new Pack(count);
-						DWORD index = 1; //Offset for items
-						bool map = ResList[type][ID].state == 3; //Mapping
-						for (BYTE i = 0; i < count; i++)
-						{
-							BYTE b = *(base + index);
-							WORD v = *(WORD*)(base + index + 1);
-							if (!map)
-								LoadResource(b, v, NULL);
-							else
-								MapResource(b, v, NULL);
-							pack->obj[i] = &ResList[b][v];
-							pack->type[i] = b;
-							pack->ID[i] = v;
-							index += 3;
-						}
-						Package* package = new Package;
-						package->type = type;
-						package->ID = ID;
-						package->package = pack;
-						LoadPackage(package);
-					}
-					InterlockedDecrement(&pView->dwRef);
-				}
-				else
-				{
-					HANDLE hFile = CreateFile(TOFile[type].cName, GENERIC_READ, 1, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-					if (hFile == INVALID_HANDLE_VALUE)
-						throw 0;
-					SetFilePointer(hFile, offset, NULL, FILE_BEGIN);
-					BUFFER* buffer = new BUFFER(size);
-					DWORD read;
-					ReadFile(hFile, buffer->pBase, size, &read, NULL);
-					CloseHandle(hFile);
-					ResList[type][ID].loc = buffer;
-					ResList[type][ID].state = 4; //Mapped
 				}
 
 				delete pItem;
@@ -599,12 +614,14 @@ namespace Jotunheimr
 	{
 		checker.mtx.lock();
 
-		if (!checker.hThread)
-			checker.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CheckerThread, NULL, 0, NULL);
 		Package* end = checker.pEnd;
 		end->pNext->pNext = package;
 		package->pNext = end;
 		end->pNext = package;
+
+		if (!checker.hThread)
+			checker.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CheckerThread, NULL, 0, NULL);
+		SetEvent(checker.hEvent);
 
 		checker.mtx.unlock();
 	}
@@ -615,14 +632,29 @@ namespace Jotunheimr
 		Package* end = checker.pEnd;
 		try
 		{
-			for (; !bExit; Sleep(500))
+			while (!bExit)
 			{
-				checker.mtx.lock();
+				if (WaitForSingleObject(checker.hEvent, INFINITE) != WAIT_OBJECT_0)
+					throw 0;
 
-				Package* curr = base->pNext;
-				Package* prev = base;
-				while (curr != end)
+				Package* curr = base;
+				Package* prev = NULL;
+				for (;; Sleep(1))
 				{
+					checker.mtx.lock();
+
+					prev = curr;
+					curr = curr->pNext;
+					if (curr == end)
+					{
+						curr = base->pNext;
+						prev = base;
+					}
+
+					checker.mtx.unlock();
+					if (curr == end)
+						break;
+
 					bool queue = true;
 					Res** obj = NULL;
 					BYTE count = 0;
@@ -647,10 +679,9 @@ namespace Jotunheimr
 							break;
 						}
 					}
-
 					if (queue)
 					{
-						for (int i = 0;; i = (i + 1) % PACKER_COUNT)
+						for (int i = 0;; i = (i + 1) % PACKER_COUNT, Sleep(1))
 						{
 							if (!packer[i].hThread)
 							{
@@ -661,21 +692,23 @@ namespace Jotunheimr
 							if (packer[i].bDone)
 							{
 								packer[i].package = curr;
-								packer[i].bDone = false;
-								SetEvent(packer[i].hEvent);
+
+								checker.mtx.lock();
+
 								prev->pNext = curr->pNext;
 								curr = prev;
 								if (curr->pNext == end)
 									end->pNext = curr;
+
+								checker.mtx.unlock();
+
+								packer[i].bDone = false;
+								SetEvent(packer[i].hEvent);
 								break;
 							}
 						}
 					}
-					prev = curr;
-					curr = curr->pNext;
 				}
-
-				checker.mtx.unlock();
 			}
 		}
 		catch (...)
@@ -694,46 +727,45 @@ namespace Jotunheimr
 			while (!bExit)
 			{
 				if (packer->bDone)
-				{
 					if (WaitForSingleObject(packer->hEvent, INFINITE) != WAIT_OBJECT_0)
 						throw 0;
-					ResetEvent(packer->hEvent);
-					continue;
-				}
 
 				Package* package = packer->package;
-				if (package->type == TO::ANIM)
+				if (package != NULL)
 				{
-					Anim* anim = (Anim*)package->package;
-					Res** obj = anim->obj;
-					Frame* frame = anim->frame;
-					BYTE count = anim->count;
-					bool loop = anim->loops > 0; //For now, either loops or doesn't
-					SpriteAnim* spriteanim = new SpriteAnim(count, loop);
-					Sprite* sprites = spriteanim->sprites;
-					for (BYTE i = 0; i < count; i++)
+					if (package->type == TO::ANIM)
 					{
-						sprites[i].texture = (IDirect3DTexture9*)obj[i]->loc;
-						sprites[i].center = D3DXVECTOR3(frame[i].x, frame[i].y, 0.0f);
-						sprites[i].delay = (float)frame[i].delay / 1000.0f;
+						Anim* anim = (Anim*)package->package;
+						Res** obj = anim->obj;
+						Frame* frame = anim->frame;
+						BYTE count = anim->count;
+						bool loop = anim->loops > 0; //For now, either loops or doesn't
+						SpriteAnim* spriteanim = new SpriteAnim(count, loop);
+						Sprite* sprites = spriteanim->sprites;
+						for (BYTE i = 0; i < count; i++)
+						{
+							sprites[i].texture = (IDirect3DTexture9*)obj[i]->loc;
+							sprites[i].center = D3DXVECTOR3(frame[i].x, frame[i].y, 0.0f);
+							sprites[i].delay = (float)frame[i].delay / 1000.0f;
+						}
+						anim->spriteanim = spriteanim;
+
+						ResList[package->type][package->ID].loc = anim;
+						ResList[package->type][package->ID].state = 2; //Loaded
 					}
-					anim->spriteanim = spriteanim;
+					else if (package->type == TO::PACK)
+					{
+						Pack* pack = (Pack*)package->package;
+						Res** obj = pack->obj;
+						BYTE count = pack->count;
+						void** fullpack = new void*[count];
+						for (BYTE i = 0; i < count; i++)
+							fullpack[i] = obj[i]->loc;
+						pack->pack = fullpack;
 
-					ResList[package->type][package->ID].loc = anim;
-					ResList[package->type][package->ID].state = 2; //Loaded
-				}
-				else if (package->type == TO::PACK)
-				{
-					Pack* pack = (Pack*)package->package;
-					Res** obj = pack->obj;
-					BYTE count = pack->count;
-					void** fullpack = new void*[count];
-					for (BYTE i = 0; i < count; i++)
-						fullpack[i] = obj[i]->loc;
-					pack->pack = fullpack;
-
-					ResList[package->type][package->ID].loc = pack;
-					ResList[package->type][package->ID].state += 1; //Loading -> Loaded || Mapping -> Mapped
+						ResList[package->type][package->ID].loc = pack;
+						ResList[package->type][package->ID].state += 1; //Loading -> Loaded || Mapping -> Mapped
+					}
 				}
 
 				delete package;
