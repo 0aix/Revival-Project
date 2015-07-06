@@ -9,7 +9,7 @@ int main()
 		return 0;
 	printf("WSASTARTUP OK\n");
 	
-
+	SOMAXCONN
 	WSACleanup();
 	getchar();
 	return 0;
