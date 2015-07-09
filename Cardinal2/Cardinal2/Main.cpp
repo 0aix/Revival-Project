@@ -1,10 +1,10 @@
 #include "stdafx.h"
 #include "Cardinal.h"
-#include "Jotunheimr.h"
 #include "Misc.h"
 #include "Constants.h"
 
 #define WS_DEFAULT ((WS_OVERLAPPEDWINDOW | WS_SYSMENU) & ~(WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME))
+#define CLASSNAME "Cardinal2"
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -22,7 +22,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	wcex.lpszMenuName = NULL;
-	wcex.lpszClassName = "Main";
+	wcex.lpszClassName = CLASSNAME;
 	//wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
 	wcex.hIconSm = NULL;
 
@@ -32,7 +32,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	RECT rect = { 0, 0, C::WINDOW_WIDTH, C::WINDOW_HEIGHT };
 	AdjustWindowRect(&rect, WS_DEFAULT, false);
 
-	HWND hwnd = CreateWindow("Main", "Main", WS_DEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, hInstance, NULL);
+	HWND hwnd = CreateWindow(CLASSNAME, CLASSNAME, WS_DEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, hInstance, NULL);
 
 	if (!hwnd)
 		return 1;
@@ -51,7 +51,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 		Cardinal::Uninitialize();
 	}
-	UnregisterClass("Main", hInstance);
+	UnregisterClass(CLASSNAME, hInstance);
 
 	return (int)msg.wParam;
 }

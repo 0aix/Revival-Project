@@ -25,6 +25,9 @@
     <Filter Include="Header Files\GRAPHICS">
       <UniqueIdentifier>{b1ca761c-a65f-403d-b561-ddb9d2be25b8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\RP">
+      <UniqueIdentifier>{8b529d0c-24cf-479f-8bdc-61855669b567}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game.h">
@@ -67,6 +70,12 @@
       <Filter>Header Files\GRAPHICS</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Character.h">
+      <Filter>Header Files\RP</Filter>
+    </ClInclude>
+    <ClInclude Include="World.h">
+      <Filter>Header Files\RP</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -95,6 +104,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MainScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LoadScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WorldScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

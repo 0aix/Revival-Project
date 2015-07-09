@@ -1,7 +1,9 @@
 #pragma once
 
+#include "Windows.h"
 #include "Sprite.h"
 #include "TO.h"
+using namespace std;
 
 namespace TO
 {

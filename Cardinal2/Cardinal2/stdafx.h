@@ -8,5 +8,7 @@
 #include <XAudio2.h>
 #include <vorbisfile.h>
 #include "Misc.h"
+#include "Cardinal.h"
+#include "Jotunheimr.h"
 
 using namespace std;

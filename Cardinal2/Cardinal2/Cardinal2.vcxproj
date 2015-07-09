@@ -152,6 +152,7 @@
   <ItemGroup>
     <ClInclude Include="Audio.h" />
     <ClInclude Include="Cardinal.h" />
+    <ClInclude Include="Character.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Graphics.h" />
@@ -164,6 +165,7 @@
     <ClInclude Include="Subscene.h" />
     <ClInclude Include="TO.h" />
     <ClInclude Include="View.h" />
+    <ClInclude Include="World.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Audio.cpp" />
@@ -171,6 +173,7 @@
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Jotunheimr.cpp" />
+    <ClCompile Include="LoadScene.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MainScene.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -178,6 +181,7 @@
     </ClCompile>
     <ClCompile Include="View.cpp" />
     <ClCompile Include="Voice.cpp" />
+    <ClCompile Include="WorldScene.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

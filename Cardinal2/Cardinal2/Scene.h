@@ -43,6 +43,7 @@ public:
 
 private:
 	ViewManager* VM = NULL;
+	IDirect3DTexture9* circle = NULL;
 };
 
 class LoadScene : public IScene
@@ -53,9 +54,6 @@ public:
 	void Update();
 	void HandleInput();
 	void Render();
-
-private:
-	int tick = 0;
 };
 
 class EndScene : public IScene

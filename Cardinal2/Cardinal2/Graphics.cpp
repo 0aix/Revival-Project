@@ -43,3 +43,26 @@ namespace Graphics
 		d3d->Release();
 	}
 }
+
+//METHOD 1 OF RENDERING ON TEXTURE
+//d3ddev->CreateTexture(256, 256, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &texture, NULL);
+//IDirect3DSurface9* backTarget;
+//d3ddev->GetRenderTarget(0, &backTarget);
+//IDirect3DSurface9* surfTarget;
+//texture->GetSurfaceLevel(0, &surfTarget);
+//d3ddev->SetRenderTarget(0, surfTarget);
+//d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, 0xFFFF0000, 1.0f, 0);
+//d3ddev->SetRenderTarget(0, backTarget);
+
+//METHOD 2 OF RENDERING ON TEXTURE
+//d3ddev->CreateTexture(256, 256, 0, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &texture, NULL);
+//D3DLOCKED_RECT rect = { 0 };
+//texture->LockRect(0, &rect, NULL, D3DLOCK_DISCARD);
+//DWORD* block = (DWORD*)rect.pBits;
+//int pitch = rect.Pitch; //# of bytes in one row. in this case, 1024 since 4 bytes is the stride
+//for (int row = 0; row < 256; row++)
+//	for (int col = 0; col < 256; col++)
+//		block[row * 256 + col] = 0xFFFF0000;
+//texture->UnlockRect(0);
+
+//NOTE: UPDATESURFACE AND UPDATETEXTURE CAN BE USED TO MISH-MASH DIFFERENT TEXTURES TOGETHER
