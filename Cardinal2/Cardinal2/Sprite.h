@@ -1,13 +1,14 @@
 #pragma once
 
 #include <d3dx9.h>
+#include "Constants.h"
 #include "Misc.h"
 
 struct Sprite
 {
 	IDirect3DTexture9* texture;
 	D3DXVECTOR3 center;
-	float delay;
+	double delay;
 };
 
 struct SpriteAnim
@@ -27,7 +28,7 @@ struct SpriteAnim
 struct SpriteAnimation
 {
 	Sprite* sprites;
-	float acc;
+	double acc;
 	int index;
 	int count;
 	bool loop;
@@ -49,14 +50,15 @@ struct SpriteAnimation
 	}
 
 	//whether sprite changed
-	//-1 no more, 0 no change, 1 change
-	int Update(float time)
+	//-1 done, 0 no change, 1 change
+	int Update()
 	{
 		//could make a ready check here but.. naahhh
-		acc += time;
-		if (acc >= sprites[index].delay)
+		acc += C::TICK;
+		double delay = sprites[index].delay;
+		if (acc >= delay)
 		{
-			acc -= sprites[index].delay;
+			acc -= delay;
 			index++;
 			if (index == count)
 			{
@@ -71,10 +73,7 @@ struct SpriteAnimation
 	}
 
 	//well.. tech not needed but less referencing, should be faster
-	Sprite* Render()
-	{
-		return &sprites[index];
-	}
+	Sprite* Render() { return &sprites[index]; }
 };
 
 struct Effect
@@ -82,6 +81,7 @@ struct Effect
 	SpriteAnimation animation;
 	Sprite* sprite;
 	D3DXVECTOR3 pos;
+	double radian;
 };
 
 typedef LList<Effect> EffectList;

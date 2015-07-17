@@ -76,6 +76,9 @@
     <ClInclude Include="World.h">
       <Filter>Header Files\RP</Filter>
     </ClInclude>
+    <ClInclude Include="Ball.h">
+      <Filter>Header Files\RP</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -110,6 +113,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="WorldScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Shamoo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="World.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ShamooBall.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

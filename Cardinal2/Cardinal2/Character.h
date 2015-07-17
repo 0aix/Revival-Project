@@ -1,42 +1,72 @@
 #pragma once
 
 #include <d3dx9.h>
+#include "Misc.h"
+
+class IBall;
+struct Effect;
+typedef LList<IBall> BallList;
+typedef LList<Effect> EffectList;
 
 enum S
 {
 	NOP, CCW, CW, 
-	FORE, BACK,
-	ATTACK, SKILL, ULT, 
-	KB, STUN, GUARD
+	BOOSTER, FORWARD, BACK,
+	ATTACK, SKILL, ULT, SHIELD,
+	ATTCAST, SKILLCAST, ULTCAST,
+	KB, STUN, DEAD
 };
 
 class ICharacter
 {
 public:
+	~ICharacter()
+	{
+		delete pEffectBase;
+		delete pEffectEnd;
+	}
 	virtual void Update() = 0;
-	virtual void Keydown(byte state) = 0;
-	virtual void Keyup(byte state) = 0;
+	virtual void Key(S action, bool down) = 0;
 	virtual void Attack() = 0;
 	virtual void Skill() = 0;
 	virtual void Ult() = 0;
-	virtual void Guard() = 0;
+	virtual void Shield() = 0;
+	virtual void Neutral() = 0;
+	virtual void Hit(double angle, double impulse, double dmg, bool stun, double time) = 0;
+	virtual void Impulse(double angle, double impulse, bool cancel) = 0;
+	virtual void Die() = 0;
 
 	D3DXVECTOR3 pos;
+	double x, y;
+	double vx, vy;
 	double speed;
-	double acc;
-	double rotation;
-	double angle;
+	double accel;
+	double angular; //angular speed
+	double radian; //direction
+	double maxspeed;
+	double mass;
 
-	byte state;
-	byte rstate; //0 - nope, 1 - ccw, 2 - cw
-	double lock;
+	S state;
+	S mstate; //nope, fore, back
+	S rstate; //nope, ccw, cw
+	bool canMove;
+	int lock;
+	int buffer;
+	int cast;
+	S next;
 
 	double hp;
 	double sp;
 	double mp;
+	double gp;
+	double hpregen;
 	double spregen;
 	double mpregen;
+	double gpregen;
 
+	//BallList* pBallBase = NULL;
+	EffectList* pEffectBase = NULL;
+	EffectList* pEffectEnd = NULL;
 };
 
 class Shamoo : public ICharacter
@@ -44,10 +74,13 @@ class Shamoo : public ICharacter
 public:
 	Shamoo();
 	void Update();
-	void Keydown(byte state);
-	void Keyup(byte state);
+	void Key(S action, bool down);
 	void Attack();
 	void Skill();
 	void Ult();
-	void Guard();
+	void Shield();
+	void Neutral();
+	void Hit(double angle, double impulse, double dmg, bool stun, double time);
+	void Impulse(double angle, double impulse, bool cancel);
+	void Die();
 };

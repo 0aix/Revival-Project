@@ -747,7 +747,7 @@ namespace Jotunheimr
 						{
 							sprites[i].texture = (IDirect3DTexture9*)obj[i]->loc;
 							sprites[i].center = D3DXVECTOR3(frame[i].x, frame[i].y, 0.0f);
-							sprites[i].delay = (float)frame[i].delay / 1000.0f;
+							sprites[i].delay = frame[i].delay / 1000.0;
 						}
 						anim->spriteanim = spriteanim;
 

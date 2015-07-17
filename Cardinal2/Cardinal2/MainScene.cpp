@@ -5,12 +5,11 @@ MainScene::MainScene() : IScene()
 {
 	pScenes = new ISubscene*;
 	pScenes[0] = new WorldScene;
-	circle = (IDirect3DTexture9*)Cardinal::GetState(0);
 }
 
 void MainScene::Release() 
 {
-	circle->Release();
+	pScenes[0]->Release();
 	delete this;
 }
 
@@ -26,7 +25,7 @@ void MainScene::HandleInput()
 
 void MainScene::Render() 
 {
-	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0xFF000000, 1.0f, 0);
+	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0xFFFFFFFF, 1.0f, 0);
 	d3ddev->BeginScene();
 	sprite->Begin(D3DXSPRITE_ALPHABLEND);
 	

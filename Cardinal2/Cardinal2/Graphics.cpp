@@ -30,9 +30,10 @@ namespace Graphics
 			return false;
 
 		d3ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-		/*gD3dDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-		gD3dDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-		gD3dDevice->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);*/
+		d3ddev->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_NONE);
+		d3ddev->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+		d3ddev->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+		d3ddev->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
 
 		return true;
 	}
@@ -41,6 +42,33 @@ namespace Graphics
 	{
 		d3ddev->Release();
 		d3d->Release();
+	}
+
+	//Adjusts center, rotates by radian, translates, and then scales
+	//Null transformations are not applied
+	D3DXMATRIX* D3DX2DTransform(D3DXMATRIX* pOut, D3DXVECTOR2* center, float radian, D3DXVECTOR2* translation, D3DXVECTOR2* scaling)
+	{
+		D3DXMATRIX mat1;
+		D3DXMATRIX mat2;
+
+		if (center)
+			D3DXMatrixTranslation(&mat1, -center->x, -center->y, 0.0f);
+		else
+			D3DXMatrixIdentity(&mat1);
+		D3DXMatrixRotationZ(&mat2, radian);
+		D3DXMatrixMultiply(&mat1, &mat1, &mat2);
+
+		if (translation)
+			D3DXMatrixTranslation(&mat2, translation->x, translation->y, 0.0f);
+		else
+			D3DXMatrixIdentity(&mat2);
+		D3DXMatrixMultiply(&mat1, &mat1, &mat2);
+
+		if (scaling)
+			D3DXMatrixScaling(&mat2, scaling->x, scaling->y, 1.0f);
+		else
+			D3DXMatrixIdentity(&mat2);
+		return D3DXMatrixMultiply(pOut, &mat1, &mat2);
 	}
 }
 

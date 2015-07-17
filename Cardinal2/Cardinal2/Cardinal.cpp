@@ -86,7 +86,7 @@ namespace Cardinal
 		end++;
 		if (end == RAWINPUT_BUFFER_SIZE)
 			end = 0;
-		if (end == start) //stupid fix; rewrites last input if overloading
+		if (end == start) //rewrites last input if overloading
 		{
 			end--;
 			if (end == -1)
@@ -103,16 +103,17 @@ namespace Cardinal
 			return;
 		}
 
+		int count = 0;
 		RAWINPUT raw;
-
 		int limit = end;
-		while (start != limit)
+		for (; start != limit; start = (start + 1) % RAWINPUT_BUFFER_SIZE)
 		{
+			count++;
 			raw = pBuffer[start];
 			if (raw.header.dwType == RIM_TYPEMOUSE)
 			{
-				RAWMOUSE mouse = raw.data.mouse;
 				pInput->type = 0;
+				RAWMOUSE mouse = raw.data.mouse;
 				if (mouse.usFlags & 0x01) // absolute
 				{
 					pInput->pos.x = mouse.lLastX;
@@ -141,6 +142,7 @@ namespace Cardinal
 			}
 			else if (raw.header.dwType == RIM_TYPEKEYBOARD)
 			{
+				pInput->type = 1;
 				RAWKEYBOARD keyboard = raw.data.keyboard;
 				byte vk = keyboard.VKey;
 				if (vk < 146)
@@ -157,11 +159,9 @@ namespace Cardinal
 						pInput->ALT = flag;
 				}
 			}
-			start++;
-			if (start == RAWINPUT_BUFFER_SIZE)
-				start = 0;
+			else continue;
+			pScene->HandleInput();
 		}
-		pScene->HandleInput();
 	}
 
 	int LoadScene(IScene* ps)

@@ -18,4 +18,7 @@ namespace Graphics
 
 	bool Initialize(HWND hwnd);
 	void Uninitialize();
+
+	//Helper functions
+	D3DXMATRIX* D3DX2DTransform(D3DXMATRIX* pOut, D3DXVECTOR2* center, float radian, D3DXVECTOR2* translation, D3DXVECTOR2* scaling);
 }

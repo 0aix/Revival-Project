@@ -43,7 +43,6 @@ public:
 
 private:
 	ViewManager* VM = NULL;
-	IDirect3DTexture9* circle = NULL;
 };
 
 class LoadScene : public IScene

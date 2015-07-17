@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Scene.h"
+#include "World.h"
 
 class ISubscene : public IScene
 {
@@ -25,4 +26,14 @@ public:
 
 private:
 	GameClock clock;
+	ICharacter* player;
+	IWorld* world;
+	D3DXVECTOR3 camera;
+	double dTime;
+
+	D3DXMATRIX scalingmat;
+	D3DXVECTOR2 scaling;
+	IDirect3DTexture9* circle = NULL;
+	IDirect3DTexture9* arrow = NULL;
+	IDirect3DTexture9* tile = NULL;
 };
