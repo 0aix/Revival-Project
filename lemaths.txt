@@ -121,4 +121,32 @@ New rules: (make some only apply to shamoo?)
 
 
 
+----------------------------------
+circles bouncing and stuff and lines
+----------------------------------
+distance circle to line
+----------------------------------
+t [0-1]
+x = PX + (QX - PX)t
+y = PY + (QY - PY)t
+
+dx = x - cx = PX + (QX - PX)t - cx
+dy = y - cy = PY + (QY - PY)t - cy
+
+d^2 = dx^2 + dy^2
+D = d^2 = (PX + (QX - PX)t - cx)^2 + (PY + (QY - PY)t - cy)^2
+dD = [2(PX + (QX - PX)t - cx)(QX - PX) + 2(PY + (QY - PY)t - cy)(QY - PY)] dt
+We want dD/dt = 0
+0 = PX(QX - PX) + [(QX - PX)^2]t - cx(QX - PX) + PY(QY - PY) + [(QY - PY)^2]t - cy(QY - PY)
+0 = (PX - cx)(QX - PX) + [(QX - PX)^2 + (QY - PY)^2]t + (PY - cy)(QY - PY)
+
+-[(PX - cx)(QX - PX) + (PY - cy)(QY - PY)]
+------------------------------------------ = t
+       [(QX - PX)^2 + (QY - PY)^2]
+
+
+-50, 50 -> 50, 50       0, 100; 50
+
+t = -[-50(100) + -50(0)]/[100^2 + 0^2]
+  = 5000/10000 = .5
 

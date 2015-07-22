@@ -2,6 +2,7 @@
 
 #include <d3dx9.h>
 #include "Misc.h"
+#include "Physics.h"
 
 class IBall;
 struct Effect;
@@ -32,19 +33,16 @@ public:
 	virtual void Ult() = 0;
 	virtual void Shield() = 0;
 	virtual void Neutral() = 0;
-	virtual void Hit(double angle, double impulse, double dmg, bool stun, double time) = 0;
-	virtual void Impulse(double angle, double impulse, bool cancel) = 0;
+	virtual void Hit(double dmg, bool stun, double time) = 0;
 	virtual void Die() = 0;
 
 	D3DXVECTOR3 pos;
-	double x, y;
-	double vx, vy;
+	Circle circle;
 	double speed;
 	double accel;
 	double angular; //angular speed
 	double radian; //direction
 	double maxspeed;
-	double mass;
 
 	S state;
 	S mstate; //nope, fore, back
@@ -80,7 +78,6 @@ public:
 	void Ult();
 	void Shield();
 	void Neutral();
-	void Hit(double angle, double impulse, double dmg, bool stun, double time);
-	void Impulse(double angle, double impulse, bool cancel);
+	void Hit(double dmg, bool stun, double time);
 	void Die();
 };

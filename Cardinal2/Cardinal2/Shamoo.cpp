@@ -19,15 +19,12 @@
 Shamoo::Shamoo()
 {
 	pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	x = 0.0; y = 0.0;
-	vx = 0.0; vy = 0.0;
+	circle = Circle(0.0, 0.0, 0.0, 0.0, C::RADIUS, 1.0 / MASS, 0.5);
 	speed = 0.0;
 	accel = 0.0;
 	angular = 0.0;
 	radian = 0.0;
 	maxspeed = 0.0;
-	//mass = 800.0;
-	//friction = mass * C::TICK * C::TICK;
 
 	state = S::NOP;
 	mstate = S::NOP;
@@ -64,6 +61,8 @@ void Shamoo::Update()
 	//Radian, Acceleration, Friction, Position
 	radian += angular;
 	double angle;
+	double vx = circle.vel.x;
+	double vy = circle.vel.y;
 	if (vx == 0.0 && vy == 0.0)
 		angle = radian;
 	else
@@ -97,11 +96,13 @@ void Shamoo::Update()
 		else if (ay < 0.0 && vy > my)
 			vy = max(my, vy + ay);
 	}
-	x += vx;
-	y += vy;
+	circle.pos.x += vx;
+	circle.pos.y += vy;
+	circle.vel.x = vx;
+	circle.vel.y = vy;
 
-	pos.x = x;
-	pos.y = y;
+	pos.x = circle.pos.x;
+	pos.y = circle.pos.y;
 	radian = fmod(radian, C::TWOPI);
 
 	if (lock >= 0)
@@ -255,22 +256,12 @@ void Shamoo::Neutral()
 
 }
 
-void Shamoo::Hit(double angle, double impulse, double dmg, bool stun, double time)
+void Shamoo::Hit(double dmg, bool stun, double time)
 {
-
+	
 }
 
-void Shamoo::Impulse(double angle, double impulse, bool cancel)
-{
-	if (cancel) //momentum cancel
-	{
-		vx = 0.0;
-		vy = 0.0;
-	}
-	vx += impulse * cos(angle);
-	vy += impulse * sin(angle);
-}
-
+//base implementation?
 void Shamoo::Die()
 {
 

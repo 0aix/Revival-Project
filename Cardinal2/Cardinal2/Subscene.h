@@ -27,7 +27,7 @@ public:
 private:
 	GameClock clock;
 	ICharacter* player;
-	IWorld* world;
+	World* world;
 	D3DXVECTOR3 camera;
 	double dTime;
 

@@ -156,6 +156,7 @@
     <ClInclude Include="Character.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="Physics.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Jotunheimr.h" />
     <ClInclude Include="Misc.h" />
@@ -170,6 +171,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Audio.cpp" />
+    <ClCompile Include="Physics.cpp" />
     <ClCompile Include="ShamooBall.cpp" />
     <ClCompile Include="Cardinal.cpp" />
     <ClCompile Include="Game.cpp" />

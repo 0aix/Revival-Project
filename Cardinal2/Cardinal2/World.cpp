@@ -1,21 +1,33 @@
 #include "stdafx.h"
 #include "World.h"
-#include "Character.h"
 
 #define BOUNCE -0.5
 
-SquareWorld::SquareWorld(ICharacter* character, double length, int cap) : IWorld(character, length, length, cap)
+World::World(ICharacter* character, double w, double h, int cap)
 {
+	players = new ICharacter*[cap] { 0 };
+	for (int i = 0; i < cap; i++)
+		players[i] = NULL;
+	players[0] = character;
+	width = w;
+	height = h;
+	capacity = cap;
 
+	Line L[4];
+	L[0] = Line(0.0, 0.0, 0.0, h);
+	L[1] = Line(0.0, h, w, h);
+	L[2] = Line(w, h, w, 0.0);
+	L[3] = Line(w, 0.0, 0.0, 0.0);
+	box = new Box(L, 4, 0.0, 0.0, 0.0, 1.0);
 }
 
-SquareWorld::~SquareWorld()
+World::~World()
 {
-
+	delete[] players;
 }
 
 //Set Z for everything
-void SquareWorld::Update()
+void World::Update()
 {
 	for (int i = 0; i < capacity; i++)
 	{
@@ -23,69 +35,23 @@ void SquareWorld::Update()
 		if (player)
 		{
 			player->Update();
-			double x = player->x;
-			double y = player->y;
-			double vx = player->vx;
-			double vy = player->vy;
-			double dirx = player->accel * cos(player->radian);
-			double diry = player->accel * sin(player->radian);
-			bool moving = player->canMove && player->mstate != S::NOP;
-			bool update = false;
-			//Assume map is wider than the players...
-			if (x - C::RADIUS < 0.0)
+			Circle& circle = player->circle;
+			Collision coll;
+			for (int i = box->count - 1; i >= 0; i--)
 			{
-				if (vx < 0.0)
-				{
-					if (!moving || dirx >= 0.0)
-						vx *= BOUNCE;
-					else
-						vx *= BOUNCE / 2.0;
-					player->vx = vx;
-					player->x = C::RADIUS;
-				}
-				update = true;
+				if (Physics::CircleToLine(circle, box->S[i], &coll))
+					Physics::ResolveCollision(circle, *box, coll);
 			}
-			else if (x + C::RADIUS > width)
+			for (int n = i; n < capacity; n++)
 			{
-				if (vx > 0.0)
+				ICharacter* player2 = players[n];
+				if (player2)
 				{
-					if (!moving || dirx <= 0.0)
-						vx *= BOUNCE;
-					else
-						vx *= BOUNCE / 2.0;
-					player->vx = vx;
-					player->x = width - C::RADIUS;
+					Circle& circle2 = player2->circle;
+					if (Physics::CircleToCircle(circle, circle2, &coll))
+						Physics::ResolveCollision(circle, circle2, coll);
 				}
-				update = true;
 			}
-			if (y - C::RADIUS < 0.0)
-			{
-				if (vy < 0.0)
-				{
-					if (!moving || diry >= 0.0)
-						vy *= BOUNCE;
-					else
-						vy *= BOUNCE / 2.0;
-					player->vy = vy;
-					player->y = C::RADIUS;
-				}
-				update = true;
-			}
-			else if (y + C::RADIUS > height)
-			{
-				if (vy > 0.0)
-				{
-					if (!moving || diry <= 0.0)
-						vy *= BOUNCE;
-					else
-						vy *= BOUNCE / 2.0;
-					player->vy = vy;
-					player->y = height - C::RADIUS;
-				}
-				update = true;
-			}
-			if (update)
-				player->speed = sqrt(vx * vx + vy * vy);
 		}
 	}
 }

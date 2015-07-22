@@ -1,14 +1,16 @@
 #include "stdafx.h"
 #include "Subscene.h"
-#include "Character.h"
 #include "World.h"
 
 WorldScene::WorldScene() : ISubscene()
 {
 	player = new Shamoo();
-	world = new SquareWorld(player, 8192.0, 1);
-	player->x = 4096.0;
-	player->y = 4096.0;
+	world = new World(player, 8192.0, 8192.0, 2);
+	player->circle.pos.x = 4096.0;
+	player->circle.pos.y = 4096.0;
+	world->players[1] = new Shamoo();
+	world->players[1]->circle.pos.x = 4096.0;
+	world->players[1]->circle.pos.y = 4096.0;
 	camera.x = 4096.0 - C::CENTER_X;
 	camera.y = 4096.0 - C::CENTER_Y;
 	if (camera.x < 0.0f)
@@ -43,8 +45,8 @@ void WorldScene::Update()
 	while (dTime >= C::TICK)
 	{
 		world->Update();
-		camera.x = player->x - C::CENTER_X;
-		camera.y = player->y - C::CENTER_Y;
+		camera.x = player->circle.pos.x - C::CENTER_X;
+		camera.y = player->circle.pos.y - C::CENTER_Y;
 		if (camera.x < 0.0f)
 			camera.x = 0.0f;
 		if (camera.y < 0.0f)
