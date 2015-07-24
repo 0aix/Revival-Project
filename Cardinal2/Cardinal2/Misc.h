@@ -9,6 +9,22 @@ struct LList
 	LList<T>* pNext = NULL;
 };
 
+template <typename T>
+struct LLIterator
+{
+	LLIterator<T>(LList<T>** ppBase)
+	{
+		pListNode = *ppBase;
+		pListPrev = ppBase;
+	}
+	LList<T>* Next(bool remove)
+	{
+
+	}
+	LList<T>* pListNode = NULL;
+	LList<T>** pListPrev = NULL;
+};
+
 struct Input
 {
 	BYTE type; //0 == mouse, 1 == keyboard

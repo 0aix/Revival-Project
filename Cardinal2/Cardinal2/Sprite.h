@@ -27,7 +27,7 @@ struct SpriteAnim
 
 struct SpriteAnimation
 {
-	Sprite* sprites;
+	Sprite* sprites = NULL;
 	double acc;
 	int index;
 	int count;
@@ -79,9 +79,9 @@ struct SpriteAnimation
 struct Effect
 {
 	SpriteAnimation animation;
-	Sprite* sprite;
+	Sprite* sprite = NULL;
 	D3DXVECTOR3 pos;
-	double radian;
+	double radian = 0.0; //**
 };
 
 typedef LList<Effect> EffectList;

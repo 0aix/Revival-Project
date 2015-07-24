@@ -139,12 +139,36 @@ void Shamoo::Update()
 		else
 			Neutral();
 	}
+
+	//actually, update balls last
+	BallList* pBallNode = pBallBase;
+	BallList** pBallPrev = &pBallBase;
+	while (pBallNode != NULL)
+	{
+		IBall* pBall = pBallNode->pData;
+		if (!pBall->Update())
+		{
+			BallList* pNext = pBallNode->pNext;
+			delete pBall;
+			delete pBallNode;
+			pBallNode = pNext;
+			*pBallPrev = pNext;
+			continue;
+		}
+		pBallPrev = &pBallNode->pNext;
+		pBallNode = pBallNode->pNext;
+	}
+
+	//ok ok, update animations last, serious serious
 }
 
 void Shamoo::Key(S action, bool down)
 {
-	if (action == S::BOOSTER || action == S::FORWARD || action == S::BACK)
+	switch (action)
 	{
+	case S::BOOSTER:
+	case S::FORWARD:
+	case S::BACK:
 		if (down)
 		{
 			mstate = action;
@@ -169,9 +193,9 @@ void Shamoo::Key(S action, bool down)
 			mstate = S::NOP;
 			accel = 0.0;
 		}
-	}
-	else if (action == S::CCW || action == S::CW)
-	{
+		break;
+	case S::CCW:
+	case S::CW:
 		if (down)
 		{
 			rstate = action;
@@ -182,6 +206,14 @@ void Shamoo::Key(S action, bool down)
 			rstate = S::NOP;
 			angular = 0.0;
 		}
+		break;
+	case S::SKILL:
+		if (down)
+		{
+			next = S::SKILL;
+			buffer = 20;
+		}
+		break;
 	}
 }
 
@@ -199,6 +231,7 @@ void Shamoo::Attack()
 	{
 		cast = 80; //0.400 secs
 		lock = 100;//0.500 secs
+		buffer = -1;
 		sp -= 20.0; //subtract on cast instead?
 		state = S::ATTACK;
 
@@ -212,17 +245,18 @@ void Shamoo::Skill()
 	{
 		cast = -1;
 		state = S::SKILLCAST;
-
-
+		BallList* pBallList = new BallList;
+		pBallList->pData = new Shamoo_Skill(this);
+		pBallList->pNext = pBallBase;
+		pBallBase = pBallList;
 	}
 	else if (mp >= 40.0)
 	{
 		cast = 20; //0.100 secs
 		lock = 25;//0.125 secs
+		buffer = -1;
 		mp -= 40.0; //subtract on cast instead?
 		state = S::SKILL;
-
-
 	}
 }
 
@@ -239,6 +273,7 @@ void Shamoo::Ult()
 	{
 		cast = 200; //1.000 secs
 		lock = 240;//1.200 secs
+		buffer = -1;
 		mp -= 250.0; //subtract on cast instead?
 		state = S::ULT;
 
@@ -253,7 +288,7 @@ void Shamoo::Shield()
 
 void Shamoo::Neutral()
 {
-
+	state = S::NOP;
 }
 
 void Shamoo::Hit(double dmg, bool stun, double time)

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Misc.h"
+
 struct Vec2
 {
 	Vec2() {}
@@ -48,6 +50,7 @@ struct Shape
 		invmass = IM;
 		restitution = RE;
 	}
+	void Step() { Displace(vel); }
 	virtual void Displace(Vec2& V) = 0;
 	Vec2 pos;
 	Vec2 vel;
@@ -62,6 +65,8 @@ struct Circle : Shape
 	void Displace(Vec2& V) { pos += V; }
 	double radius;
 };
+
+typedef LList<Circle> CircleList;
 
 struct Line
 {
@@ -94,10 +99,10 @@ struct Box : Shape
 	int count;
 };
 
+typedef LList<Box> BoxList;
+
 struct Collision
 {
-	Shape* A;
-	Shape* B;
 	Vec2 N;
 	double penetration;
 };
@@ -107,6 +112,9 @@ class Physics
 public:
 	static bool CircleToCircle(Circle& A, Circle& B, Collision* C);
 	static bool CircleToLine(Circle& A, Line& B, Collision* C);
+	static bool LineToLine(Line& A, Line& B); //intersection check only
+	static bool CircleToBox(Circle& A, Box& B, Collision* C);
+	static bool BoxToBox(Box& A, Box& B); //intersection check only
 	static void ResolveCollision(Shape& A, Shape& B, Collision& C);
 	static void Impulse(Shape& A, double impulse, Vec2& N, bool cancel = false);
 };

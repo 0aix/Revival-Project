@@ -7,7 +7,7 @@ bool Physics::CircleToCircle(Circle& A, Circle& B, Collision* C)
 	double dy = B.pos.y - A.pos.y;
 	double radii = A.radius + B.radius;
 	double length = dx * dx + dy * dy;
-	if (length <= radii * radii)
+	if (length < radii * radii)
 	{
 		if (C != NULL)
 		{
@@ -39,7 +39,7 @@ bool Physics::CircleToLine(Circle& A, Line& B, Collision* C)
 		x0 = x1 + dx * t - x0;
 		y0 = y1 + dy * t - y0;
 		double length = x0 * x0 + y0 * y0;
-		if (x0 * x0 + y0 * y0 <= radius)
+		if (x0 * x0 + y0 * y0 < radius)
 		{
 			if (C != NULL)
 			{
@@ -60,7 +60,7 @@ bool Physics::CircleToLine(Circle& A, Line& B, Collision* C)
 	dx = x2 - x0;
 	dy = y2 - y0;
 	double len2 = dx * dx + dy * dy;
-	if (len1 > radius && len2 > radius)
+	if (len1 >= radius && len2 >= radius)
 		return false;
 	
 	//Check which endpoint is closer
@@ -81,6 +81,94 @@ bool Physics::CircleToLine(Circle& A, Line& B, Collision* C)
 		C->N.Normalize();
 	}
 	return true;
+}
+
+bool Physics::LineToLine(Line& A, Line& B)
+{
+	double PX1 = A.P.x; double PX2 = A.Q.x;
+	double PY1 = A.P.y; double PY2 = A.Q.y;
+	double QX1 = B.P.x; double QX2 = B.Q.x;
+	double QY1 = B.P.y; double QY2 = B.Q.y;
+	
+	double DX1 = PX2 - PX1; double DX2 = QX2 - QX1;
+	double DY1 = PY2 - PY1; double DY2 = QY2 - QY1;
+
+	double DPQX = QX1 - PX1; 
+	double DPQY = QY1 - PY1;
+
+	double Determinant = -DX1 * DY2 + DX2 * DY1;
+	double T1 = -DPQX * DY2 + DX2 * DPQY;
+	double T2 = -DPQX * DY1 + DX1 * DPQY;
+
+	//Line segments are parallel if determinant is 0
+	if (abs(Determinant) >= 0.001)
+	{
+		T1 /= Determinant;
+		T2 /= Determinant;
+		return 0.0 <= T1 && T1 <= 1.0 && 0.0 <= T2 && T2 <= 1.0;
+	}
+	else if (abs(T1) < 0.001 && abs(T2) < 0.001)
+	{
+		if (DX1 >= 0.001 && DX1 / DY1 < 0.0)
+		{
+			PY1 *= -1.0; PY2 *= -1.0;
+			QY1 *= -1.0; QY2 *= -1.0;
+		}
+		Vec2 Min1 = Vec2(min(PX1, PX2), min(PY1, PY2));
+		Vec2 Min2 = Vec2(min(QX1, QX2), min(QY1, QY2));
+		Vec2 Max1 = Vec2(max(PX1, PX2), min(PY1, PY2));
+		Vec2 Max2 = Vec2(max(QX1, QX2), max(QY1, QY2));
+		Min1 = Vec2(max(Min1.x, Min2.x), max(Min1.y, Min2.y));
+		Max1 = Vec2(min(Max1.x, Max2.x), min(Max1.y, Max2.y));
+		return Min1.x <= Max1.x && Min1.y <= Max1.y;
+	}
+	return false;
+}
+
+bool Physics::CircleToBox(Circle& A, Box& B, Collision* C)
+{
+	int count = B.count;
+	Line* S = B.S;
+	if (!C)
+	{
+		for (int i = 0; i < count; i++)
+			if (CircleToLine(A, S[i], NULL))
+				return true;
+	}
+	else
+	{
+		Collision coll;
+		Vec2 n;
+		double p = 0.0;
+		for (int i = 0; i < count; i++)
+		{
+			if (CircleToLine(A, S[i], &coll) && coll.penetration > p)
+			{
+				n = coll.N;
+				p = coll.penetration;
+			}
+		}
+		if (p > 0.0)
+		{
+			C->N = n;
+			C->penetration = p;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool Physics::BoxToBox(Box& A, Box& B)
+{
+	int A_count = A.count;
+	int B_count = B.count;
+	Line* A_S = A.S;
+	Line* B_S = B.S;
+	for (int i = 0; i < A_count; i++)
+		for (int n = 0; n < B_count; n++)
+			if (LineToLine(A_S[i], B_S[n]))
+				return true;
+	return false;
 }
 
 void Physics::ResolveCollision(Shape& A, Shape& B, Collision& C)

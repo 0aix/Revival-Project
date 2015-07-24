@@ -62,7 +62,7 @@ public:
 	double mpregen;
 	double gpregen;
 
-	//BallList* pBallBase = NULL;
+	BallList* pBallBase = NULL;
 	EffectList* pEffectBase = NULL;
 	EffectList* pEffectEnd = NULL;
 };

@@ -109,7 +109,7 @@ void Voice::Stream()
 			pos += ret;
 		}
 
-		XAUDIO2_BUFFER buffer = { 0 };
+		XAUDIO2_BUFFER buffer = { };
 		buffer.pAudioData = (BYTE*)buffers[currentBuffer];
 		buffer.AudioBytes = VOICE_BUFFER_SIZE;
 		if (ret == 0) //end of vorbis file stream

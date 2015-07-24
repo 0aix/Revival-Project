@@ -71,7 +71,35 @@ void WorldScene::HandleInput()
 	//
 	if (pInput->type == 1) //Keyboard
 	{
-		byte keycode = pInput->keycode;
+		bool state = pInput->state;
+		switch (pInput->keycode)
+		{
+		case 'A':
+			player->Key(S::BOOSTER, state);
+			break;
+		case 'S':
+			player->Key(S::ATTACK, state);
+			break;
+		case 'D':
+			player->Key(S::SKILL, state);
+			break;
+		case 'R':
+			player->Key(S::ULT, state);
+			break;
+		case VK_UP:
+			player->Key(S::FORWARD, state);
+			break;
+		case VK_DOWN:
+			player->Key(S::BACK, state);
+			break;
+		case VK_LEFT:
+			player->Key(S::CCW, state);
+			break;
+		case VK_RIGHT:
+			player->Key(S::CW, state);
+			break;
+		}
+		/*byte keycode = pInput->keycode;
 		bool state = pInput->state;
 		if (keycode == 'A')
 			player->Key(S::BOOSTER, state);
@@ -82,7 +110,7 @@ void WorldScene::HandleInput()
 		else if (keycode == VK_LEFT)
 			player->Key(S::CCW, state);
 		else if (keycode == VK_RIGHT)
-			player->Key(S::CW, state);
+			player->Key(S::CW, state);*/
 	}
 }
 
@@ -109,6 +137,7 @@ void WorldScene::Render()
 	}
 
 	//Do the rest of the batch that needs rotated matrices
+	//right now shows everyone; remove this later
 	D3DXVECTOR2 center2d = D3DXVECTOR2(-112.5f, 37.5f);
 	D3DXMATRIX mat;
 	for (int i = 0; i < capacity; i++)
