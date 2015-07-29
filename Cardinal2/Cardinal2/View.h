@@ -27,5 +27,5 @@ public:
 	void AddView(IView* view);
 
 private:
-	ViewList* pViewBase;
+	ViewList* pViewList;
 };

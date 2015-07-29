@@ -115,15 +115,15 @@ struct Item
 {
 	BYTE type;
 	WORD ID;
-	Item* pNext = NULL;
 };
+
+typedef LList<Item> ItemList;
 
 struct Manager
 {
 	HANDLE hThread;
 	HANDLE hEvent;
-	Item* pBase;
-	Item* pEnd;
+	ItemList* pItemList;
 	FILEVIEW* fView[5];
 	DWORD fViewSize[5];
 	mutex mtx;
@@ -131,8 +131,6 @@ struct Manager
 	Manager()
 	{
 		hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-		pBase = new Item;
-		pEnd = new Item;
 		pBase->pNext = pEnd;
 		pEnd->pNext = pBase;
 	}
@@ -176,22 +174,20 @@ struct Package
 	BYTE type;
 	WORD ID;
 	void* package;
-	Package* pNext = NULL;
 };
+
+typedef LList<Package> PackageList;
 
 struct Checker
 {
 	HANDLE hThread;
 	HANDLE hEvent;
-	Package* pBase;
-	Package* pEnd;
+	PackageList* pPackageList;
 	mutex mtx;
 
 	Checker()
 	{
 		hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-		pBase = new Package;
-		pEnd = new Package;
 		pBase->pNext = pEnd;
 		pEnd->pNext = pBase;
 	}
@@ -217,7 +213,7 @@ struct Packer
 {
 	HANDLE hThread;
 	HANDLE hEvent;
-	Package* package = NULL;
+	Package* pPackage = NULL;
 	bool bDone = true;
 
 	Packer() { hEvent = CreateEvent(NULL, FALSE, FALSE, NULL); }

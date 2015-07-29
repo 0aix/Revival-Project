@@ -3,27 +3,31 @@
 #include <Windows.h>
 
 template <typename T>
-struct LList
+struct LNode
 {
 	T* pData = NULL;
 	LList<T>* pNext = NULL;
 };
 
 template <typename T>
-struct LLIterator
+struct LList
 {
-	LLIterator<T>(LList<T>** ppBase)
-	{
-		pListNode = *ppBase;
-		pListPrev = ppBase;
-	}
-	LList<T>* Next(bool remove)
-	{
+	LNode<T>* pBase = NULL;
+	LNode<T>* pEnd = NULL;
+	LNode<T>* pCurr = NULL;
+	LNode<T>** ppPrev = &pBase;
 
-	}
-	LList<T>* pListNode = NULL;
-	LList<T>** pListPrev = NULL;
+	T* Begin();
+	T* At();
+	void Next();
+	void Remove(bool del);
+	void RemoveAll();
+
+	void Push(T* pData);
+	void Queue(T* pData);
+	T* Pop();
 };
+
 
 struct Input
 {
@@ -54,26 +58,8 @@ struct GameClock
 	double frequency;
 	__int64 ticks;
 
-	void Start()
-	{
-		LARGE_INTEGER li;
-		QueryPerformanceFrequency(&li);
-		frequency = (double)li.QuadPart;
-
-		QueryPerformanceCounter(&li);
-		ticks = li.QuadPart;
-	}
-
-	double Time()
-	{
-		LARGE_INTEGER li;
-		QueryPerformanceCounter(&li);
-
-		double elapsed = (double)(li.QuadPart - ticks) / frequency;
-		ticks = li.QuadPart;
-
-		return elapsed;
-	}
+	void Start();
+	double Time();
 };
 
 struct BUFFER
@@ -88,5 +74,5 @@ struct BUFFER
 		pBase = new BYTE[length];
 		dwSize = length;
 	}
-	//pBase should be deleted manually
+	//delete pBase manually
 };

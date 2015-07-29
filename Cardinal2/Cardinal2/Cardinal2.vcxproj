@@ -171,6 +171,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Audio.cpp" />
+    <ClCompile Include="Misc.cpp" />
     <ClCompile Include="Physics.cpp" />
     <ClCompile Include="ShamooBall.cpp" />
     <ClCompile Include="Cardinal.cpp" />

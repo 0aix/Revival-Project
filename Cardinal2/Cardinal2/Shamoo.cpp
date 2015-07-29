@@ -135,6 +135,7 @@ void Shamoo::Update()
 				Ult();
 			else if (next == S::SHIELD)
 				Shield();
+			buffer--;
 		}
 		else
 			Neutral();
@@ -207,10 +208,24 @@ void Shamoo::Key(S action, bool down)
 			angular = 0.0;
 		}
 		break;
+	case S::ATTACK:
+		if (down)
+		{
+			next = S::ATTACK;
+			buffer = 20;
+		}
+		break;
 	case S::SKILL:
 		if (down)
 		{
 			next = S::SKILL;
+			buffer = 20;
+		}
+		break;
+	case S::ULT:
+		if (down)
+		{
+			next = S::ULT;
 			buffer = 20;
 		}
 		break;
@@ -224,14 +239,15 @@ void Shamoo::Attack()
 		//Time to cast...
 		cast = -1;
 		state = S::ATTCAST;
-
-
+		BallList* pBallList = new BallList;
+		pBallList->pData = new Shamoo_Attack(this);
+		pBallList->pNext = pBallBase;
+		pBallBase = pBallList;
 	}
 	else if (sp >= 20.0)
 	{
 		cast = 80; //0.400 secs
 		lock = 100;//0.500 secs
-		buffer = -1;
 		sp -= 20.0; //subtract on cast instead?
 		state = S::ATTACK;
 
@@ -254,7 +270,6 @@ void Shamoo::Skill()
 	{
 		cast = 20; //0.100 secs
 		lock = 25;//0.125 secs
-		buffer = -1;
 		mp -= 40.0; //subtract on cast instead?
 		state = S::SKILL;
 	}
@@ -266,8 +281,10 @@ void Shamoo::Ult()
 	{
 		cast = -1;
 		state = S::ULTCAST;
-
-
+		BallList* pBallList = new BallList;
+		pBallList->pData = new Shamoo_Ult(this);
+		pBallList->pNext = pBallBase;
+		pBallBase = pBallList;
 	}
 	else if (mp >= 250.0)
 	{
@@ -291,7 +308,7 @@ void Shamoo::Neutral()
 	state = S::NOP;
 }
 
-void Shamoo::Hit(double dmg, bool stun, double time)
+void Shamoo::Hit(double dmg, double stun)
 {
 	
 }

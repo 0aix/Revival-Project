@@ -33,7 +33,7 @@ public:
 	virtual void Ult() = 0;
 	virtual void Shield() = 0;
 	virtual void Neutral() = 0;
-	virtual void Hit(double dmg, bool stun, double time) = 0;
+	virtual void Hit(double dmg, double stun) = 0;
 	virtual void Die() = 0;
 
 	D3DXVECTOR3 pos;
@@ -62,9 +62,8 @@ public:
 	double mpregen;
 	double gpregen;
 
-	BallList* pBallBase = NULL;
-	EffectList* pEffectBase = NULL;
-	EffectList* pEffectEnd = NULL;
+	BallList* pBallList = NULL;
+	EffectList* pEffectList = NULL;
 };
 
 class Shamoo : public ICharacter
@@ -78,6 +77,6 @@ public:
 	void Ult();
 	void Shield();
 	void Neutral();
-	void Hit(double dmg, bool stun, double time);
+	void Hit(double dmg, double stun);
 	void Die();
 };

@@ -100,8 +100,7 @@ public:
 private:
 	std::mutex mtx;
 	IXAudio2* pXAudio2;
-	SoundList* pSoundFirst = NULL;
-	SoundList* pSoundLast = NULL;
+	SoundList* pSoundList = NULL;
 	BYTE buffers[VOICE_BUFFER_COUNT][VOICE_BUFFER_SIZE];
 	BYTE currentBuffer = 0;
 	bool bDone = false;
