@@ -15,20 +15,18 @@ enum COLL
 class IBall
 {
 public:
-	~IBall()
-	{
-		//change this to ACTUALLY DELETE STUFF
-		delete pEffectList;
-	}
+	IBall(ICharacter* player);
+	~IBall();
 	virtual bool Update() = 0;
 	virtual COLL Hit(COLL type, ICharacter* hit) = 0;
 	
 	//ONLY ONE HITBOX IS ALLOWED; EITHER THE CIRCLE OR THE BOX
+	ICharacter* parent;
 	D3DXVECTOR3 pos;
 	Circle* circle = NULL;
 	Box* box = NULL;
 
-	EffectList* pEffectList = NULL;
+	EffectList effectList;
 };
 
 typedef LList<IBall> BallList;
@@ -41,7 +39,6 @@ public:
 	bool Update();
 	COLL Hit(COLL type, ICharacter* hit);
 
-	ICharacter* parent;
 	double radius;
 	int ticks = 50;
 };
@@ -54,7 +51,6 @@ public:
 	bool Update();
 	COLL Hit(COLL type, ICharacter* hit);
 
-	ICharacter* parent;
 	int ticks = 400;
 };
 
@@ -66,6 +62,5 @@ public:
 	bool Update();
 	COLL Hit(COLL type, ICharacter* hit);
 
-	ICharacter* parent;
 	int ticks = 400;
 };

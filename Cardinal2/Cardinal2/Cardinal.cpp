@@ -8,7 +8,7 @@
 namespace Cardinal
 {
 	void** pStates;
-	Input* pInput = NULL;
+	Input* pInput;
 	IScene* pScene;
 	RAWINPUT* pBuffer;
 	DWORD dwSize;
@@ -16,7 +16,7 @@ namespace Cardinal
 	HWND hWnd;
 	mutex mtx;
 	const int STATE_COUNT = 1000;
-	const int RAWINPUT_BUFFER_SIZE = 32;
+	const int RAWINPUT_BUFFER_SIZE = 16;
 	int start = 0;
 	int end = 0;
 

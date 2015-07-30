@@ -17,8 +17,7 @@ World::World(ICharacter* character, double w, double h, int cap)
 	L[1] = Line(0.0, h, w, h);
 	L[2] = Line(w, h, w, 0.0);
 	L[3] = Line(w, 0.0, 0.0, 0.0);
-	pBoxBase = new BoxList;
-	pBoxBase->pData = new Box(L, 4, 0.0, 0.0, 0.0, 1.0);
+	boxList.Queue(new Box(L, 4, 0.0, 0.0, 0.0, 1.0));
 }
 
 World::~World()
@@ -52,59 +51,60 @@ void World::Update()
 			Circle& circle = player->circle;
 
 			//player collision with map boxes
-			BoxList* pBoxNode = pBoxBase;
-			while (pBoxNode != NULL)
+			Box* pBox = boxList.Begin();
+			while (pBox != NULL)
 			{
-				Box* pBox = pBoxNode->pData;
 				if (Physics::CircleToBox(circle, *pBox, &coll))
 					Physics::ResolveCollision(circle, *pBox, coll);
 				
 				//player's balls (only circles)
-				BallList* pBallNode = player->pBallBase;
-				while (pBallNode != NULL)
+				BallList* pBallList = &player->ballList;
+				IBall* pBall = pBallList->Begin();
+				while (pBall != NULL)
 				{
-					IBall* pBall = pBallNode->pData;
 					Circle* pCircle = pBall->circle;
 					if (pCircle != NULL && Physics::CircleToBox(*pCircle, *pBox, &coll))
 						if (pBall->Hit(COLL::OBJ, NULL) == COLL::BOUNCE)
 							Physics::ResolveCollision(*pCircle, *pBox, coll);
-					pBallNode = pBallNode->pNext;
+					pBallList->Next();
+					pBall = pBallList->At();
 				}
-
-				pBoxNode = pBoxNode->pNext;
+				boxList.Next();
+				pBox = boxList.At();
 			}
 
 			//Player collision with map circles
-			CircleList* pCircleNode = pCircleBase;
-			while (pCircleNode != NULL)
+			Circle* pCircle = circleList.Begin();
+			while (pCircle != NULL)
 			{
-				Circle* temp = pCircleNode->pData;
-				if (Physics::CircleToCircle(circle, *temp, &coll))
-					Physics::ResolveCollision(circle, *temp, coll);
+				if (Physics::CircleToCircle(circle, *pCircle, &coll))
+					Physics::ResolveCollision(circle, *pCircle, coll);
 
 				//player's balls
-				BallList* pBallNode = player->pBallBase;
-				while (pBallNode != NULL)
+				BallList* pBallList = &player->ballList;
+				IBall* pBall = pBallList->Begin();
+				while (pBall != NULL)
 				{
-					IBall* pBall = pBallNode->pData;
-					Circle* pCircle = pBall->circle;
+					Circle* pCircle2 = pBall->circle;
 					Box* pBox = pBall->box;
+
 					//Note at least one of these hitboxes is null
-					if ((pBox != NULL && Physics::CircleToBox(*temp, *pBox, &coll)) ||
-						(pCircle != NULL && Physics::CircleToCircle(*temp, *pCircle, &coll)))
+					if ((pBox != NULL && Physics::CircleToBox(*pCircle, *pBox, &coll)) ||
+						(pCircle2 != NULL && Physics::CircleToCircle(*pCircle, *pCircle2, &coll)))
 					{
 						if (pBall->Hit(COLL::OBJ, NULL) == COLL::BOUNCE)
 						{
 							if (pBox != NULL)
-								Physics::ResolveCollision(*temp, *pBox, coll);
-							else if (pCircle != NULL)
-								Physics::ResolveCollision(*temp, *pCircle, coll);
+								Physics::ResolveCollision(*pCircle, *pBox, coll);
+							else if (pCircle2 != NULL)
+								Physics::ResolveCollision(*pCircle, *pCircle2, coll);
 						}
 					}
-					pBallNode = pBallNode->pNext;
+					pBallList->Next();
+					pBall = pBallList->At();
 				}
-
-				pCircleNode = pCircleNode->pNext;
+				circleList.Next();
+				pCircle = circleList.At();
 			}
 
 			//player-player collisions
@@ -119,13 +119,14 @@ void World::Update()
 						Physics::ResolveCollision(circle, circle2, coll);
 
 					//player's balls to player collisions
-					BallList* pBallNode = player->pBallBase;
-					while (pBallNode != NULL)
+					BallList* pBallList = &player->ballList;
+					IBall* pBall = pBallList->Begin();
+					while (pBall != NULL)
 					{
-						IBall* pBall = pBallNode->pData;
 						Circle* pCircle = pBall->circle;
 						Box* pBox = pBall->box;
 						COLL type;
+
 						//Note at least one of these hitboxes is null
 						if ((pBox != NULL && Physics::CircleToBox(circle2, *pBox, &coll)) ||
 							(pCircle != NULL && Physics::CircleToCircle(circle2, *pCircle, &coll)))
@@ -140,10 +141,10 @@ void World::Update()
 						}
 
 						//to player's balls collisions
-						BallList* pBallNode2 = player2->pBallBase;
-						while (pBallNode2 != NULL)
+						BallList* pBallList2 = &player2->ballList;
+						IBall* pBall2 = pBallList2->Begin();
+						while (pBall2 != NULL)
 						{
-							IBall* pBall2 = pBallNode2->pData;
 							Circle* pCircle2 = pBall2->circle;
 							Box* pBox2 = pBall2->box;
 							
@@ -182,9 +183,11 @@ void World::Update()
 										Physics::ResolveCollision(circle2, *pCircle, coll);
 								}
 							}
-							pBallNode2 = pBallNode2->pNext;
+							pBallList2->Next();
+							pBall2 = pBallList->At();
 						}
-						pBallNode = pBallNode->pNext;
+						pBallList->Next();
+						pBall = pBallList->At();
 					}
 				}
 			}

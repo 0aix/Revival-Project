@@ -21,11 +21,6 @@ enum S
 class ICharacter
 {
 public:
-	~ICharacter()
-	{
-		delete pEffectBase;
-		delete pEffectEnd;
-	}
 	virtual void Update() = 0;
 	virtual void Key(S action, bool down) = 0;
 	virtual void Attack() = 0;
@@ -62,8 +57,8 @@ public:
 	double mpregen;
 	double gpregen;
 
-	BallList* pBallList = NULL;
-	EffectList* pEffectList = NULL;
+	BallList ballList;
+	EffectList effectList;
 };
 
 class Shamoo : public ICharacter

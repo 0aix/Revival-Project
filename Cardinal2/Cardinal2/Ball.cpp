@@ -2,9 +2,23 @@
 #include "Ball.h"
 #include "Character.h"
 
-Shamoo_Attack::Shamoo_Attack(ICharacter* player)
+//===========================IBall============================
+
+IBall::IBall(ICharacter* player)
 {
 	parent = player;
+}
+
+IBall::~IBall()
+{
+	delete box;
+	delete circle;
+}
+
+//===========================Shamoo===========================
+
+Shamoo_Attack::Shamoo_Attack(ICharacter* player) : IBall(player)
+{
 	double radian = player->radian;
 	double cosrad = cos(radian);
 	double sinrad = sin(radian);
@@ -12,11 +26,6 @@ Shamoo_Attack::Shamoo_Attack(ICharacter* player)
 	Vec2 pos = player->circle.pos;
 	circle = new Circle(pos.x + cosrad * radius, pos.y + sinrad * radius, cosrad * 8.0, sinrad * 8.0, 60.0, 0.0, 0.0);
 	circle->vel += player->circle.vel;
-}
-
-Shamoo_Attack::~Shamoo_Attack()
-{
-	delete circle;
 }
 
 bool Shamoo_Attack::Update()
@@ -47,9 +56,8 @@ COLL Shamoo_Attack::Hit(COLL type, ICharacter* hit)
 	return COLL::PASS;
 }
 
-Shamoo_Skill::Shamoo_Skill(ICharacter* player)
+Shamoo_Skill::Shamoo_Skill(ICharacter* player) : IBall(player)
 {
-	parent = player;
 	double radian = player->radian;
 	double radius = player->circle.radius;
 	double cosrad = cos(radian);
@@ -57,11 +65,6 @@ Shamoo_Skill::Shamoo_Skill(ICharacter* player)
 	Vec2 pos = player->circle.pos;
 	double speed = 800.0 * C::TICK;
 	circle = new Circle(pos.x + cosrad * radius, pos.y + sinrad * radius, cosrad * speed, sinrad * speed, 20.0, 1.0 / 800.0, 1.0);
-}
-
-Shamoo_Skill::~Shamoo_Skill()
-{
-	delete circle;
 }
 
 bool Shamoo_Skill::Update()
@@ -89,21 +92,15 @@ COLL Shamoo_Skill::Hit(COLL type, ICharacter* hit)
 	}
 }
 
-Shamoo_Ult::Shamoo_Ult(ICharacter* player)
+Shamoo_Ult::Shamoo_Ult(ICharacter* player) : IBall(player)
 {
-	parent = player;
 	double radian = player->radian;
 	double radius = player->circle.radius;
 	double cosrad = cos(radian);
 	double sinrad = sin(radian);
 	Vec2 pos = player->circle.pos;
 	double speed = 1600.0 * C::TICK;
-	circle = new Circle(pos.x + cosrad * radius, pos.y + sinrad * radius, cosrad * speed, sinrad * speed, 80.0, 1.0 / 1600.0, 1.0);
-}
-
-Shamoo_Ult::~Shamoo_Ult()
-{
-	delete circle;
+	circle = new Circle(pos.x + cosrad * radius, pos.y + sinrad * radius, cosrad * speed, sinrad * speed, 80.0, 1.0 / 3200.0, 1.0);
 }
 
 bool Shamoo_Ult::Update()

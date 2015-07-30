@@ -14,6 +14,6 @@ public:
 	double height;
 	int capacity;
 
-	BoxList* pBoxList = NULL;
-	CircleList* pCircleList = NULL;
+	BoxList boxList;
+	CircleList circleList;
 };

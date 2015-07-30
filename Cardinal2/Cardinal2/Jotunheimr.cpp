@@ -270,10 +270,7 @@ namespace Jotunheimr
 
 			manager.mtx.lock();
 
-			Item* end = manager.pEnd;
-			end->pNext->pNext = item;
-			item->pNext = end;
-			end->pNext = item;
+			manager.itemList.Queue(item);
 			res->state = 1; //Loading
 
 			if (!manager.hThread)
@@ -337,10 +334,7 @@ namespace Jotunheimr
 
 			manager.mtx.lock();
 
-			Item* end = manager.pEnd;
-			end->pNext->pNext = item;
-			item->pNext = end;
-			end->pNext = item;
+			manager.itemList.Queue(item);
 			res->state = 3; //Mapping
 
 			if (!manager.hThread)
@@ -380,8 +374,6 @@ namespace Jotunheimr
 
 	void ManagerThread()
 	{
-		Item* base = manager.pBase;
-		Item* end = manager.pEnd;
 		try
 		{
 			while (!bExit)
@@ -390,9 +382,9 @@ namespace Jotunheimr
 					throw 0;
 
 				manager.mtx.lock();
-				Item* curr = base->pNext;
+				Item* pItem = manager.itemList.Begin();
 				manager.mtx.unlock();
-				for (int i = 0; curr != end; i = (i + 1) % WORKER_COUNT, Sleep(1))
+				for (int i = 0; pItem != NULL; i = (i + 1) % WORKER_COUNT, Sleep(1))
 				{
 					if (!worker[i].hThread)
 					{
@@ -402,20 +394,20 @@ namespace Jotunheimr
 					}
 					if (worker[i].bDone)
 					{
-						BYTE type = curr->type;
-						WORD ID = curr->ID;
+						BYTE type = pItem->type;
+						WORD ID = pItem->ID;
 						DWORD itemsize = ListSize[type][ID];
 						DWORD itemoffset = ListOffset[type][ID];
 						if (ResList[type][ID].state == 1 || type == TO::PACK) //Loading || Pack
 						{
-							FILEVIEW* fView = manager.fView[type];
-							FILEVIEW* prev = NULL;
+							FILEVIEWList* fViewList = &manager.fViewList[type];
+							FILEVIEW* fView = fViewList->Begin();
 							bool found = false;
 							while (fView != NULL)
 							{
 								if (fView->dwOffset <= itemoffset && itemoffset + itemsize <= fView->dwSize)
 								{
-									worker[i].pItem = curr;
+									worker[i].pItem = pItem;
 									worker[i].pView = fView;
 									InterlockedIncrement(&fView->dwRef);
 									found = true;
@@ -423,19 +415,14 @@ namespace Jotunheimr
 								}
 								if (manager.fViewSize[i] > VIEW_SIZE_LIMIT && fView->dwRef == 0)
 								{
-									FILEVIEW* temp = fView->pNext;
-									if (prev)
-										prev->pNext = temp;
-									else
-										manager.fView[type] = temp;
 									manager.fViewSize[i] -= (fView->dwSize - fView->dwOffset);
 									UnmapViewOfFile(fView->pBase);
-									delete fView;
-									fView = temp;
-									continue;
+									fViewList->Remove(true);
 								}
-								prev = fView;
-								fView = fView->pNext;
+								else
+									fViewList->Next();
+
+								fView = fViewList->At();
 							}
 							if (!found)
 							{
@@ -448,26 +435,23 @@ namespace Jotunheimr
 								pView->dwSize = page_end;
 								pView->dwOffset = page_offset;
 								pView->dwRef = 1;
-								pView->pNext = manager.fView[type];
-								manager.fView[type] = pView;
+								fViewList->Push(pView);
 								manager.fViewSize[i] += page_end - page_offset;
 
-								worker[i].pItem = curr;
+								worker[i].pItem = pItem;
 								worker[i].pView = pView;
 							}
 						}
 						else if (ResList[type][ID].state == 3) //Mapping
 						{
-							worker[i].pItem = curr;
+							worker[i].pItem = pItem;
 							worker[i].pView = NULL;
 						}
 
 						manager.mtx.lock();
 
-						curr = curr->pNext;
-						base->pNext = curr;
-						if (curr == end)
-							end->pNext = base;
+						manager.itemList.Remove(false);
+						pItem = manager.itemList.At();
 
 						manager.mtx.unlock();
 
@@ -500,7 +484,7 @@ namespace Jotunheimr
 				if (pItem != NULL)
 				{
 					FILEVIEW* pView = worker->pView;
-					WORD type = pItem->type;
+					BYTE type = pItem->type;
 					WORD ID = pItem->ID;
 					DWORD offset = ListOffset[type][ID];
 					DWORD size = ListSize[type][ID];
@@ -553,7 +537,7 @@ namespace Jotunheimr
 							Package* package = new Package;
 							package->type = type;
 							package->ID = ID;
-							package->package = anim;
+							package->pack = anim;
 							LoadPackage(package);
 						}
 						else if (type == TO::PACK)
@@ -578,7 +562,7 @@ namespace Jotunheimr
 							Package* package = new Package;
 							package->type = type;
 							package->ID = ID;
-							package->package = pack;
+							package->pack = pack;
 							LoadPackage(package);
 						}
 						InterlockedDecrement(&pView->dwRef);
@@ -615,10 +599,7 @@ namespace Jotunheimr
 	{
 		checker.mtx.lock();
 
-		Package* end = checker.pEnd;
-		end->pNext->pNext = package;
-		package->pNext = end;
-		end->pNext = package;
+		checker.packageList.Queue(package);
 
 		if (!checker.hThread)
 			checker.hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CheckerThread, NULL, 0, NULL);
@@ -629,8 +610,6 @@ namespace Jotunheimr
 
 	void CheckerThread()
 	{
-		Package* base = checker.pBase;
-		Package* end = checker.pEnd;
 		try
 		{
 			while (!bExit)
@@ -638,36 +617,23 @@ namespace Jotunheimr
 				if (WaitForSingleObject(checker.hEvent, INFINITE) != WAIT_OBJECT_0)
 					throw 0;
 
-				Package* curr = base;
-				Package* prev = NULL;
-				for (;; Sleep(1))
+				checker.mtx.lock();
+				Package* pPackage = checker.packageList.Begin();
+				checker.mtx.unlock();
+				for (; pPackage != NULL; Sleep(1))
 				{
-					checker.mtx.lock();
-
-					prev = curr;
-					curr = curr->pNext;
-					if (curr == end)
-					{
-						curr = base->pNext;
-						prev = base;
-					}
-
-					checker.mtx.unlock();
-					if (curr == end)
-						break;
-
 					bool queue = true;
 					Res** obj = NULL;
 					BYTE count = 0;
-					if (curr->type == TO::ANIM)
+					if (pPackage->type == TO::ANIM)
 					{
-						Anim* anim = (Anim*)curr->package;
+						Anim* anim = (Anim*)pPackage->pack;
 						obj = anim->obj;
 						count = anim->count;
 					}
-					else if (curr->type == TO::PACK)
+					else if (pPackage->type == TO::PACK)
 					{
-						Pack* pack = (Pack*)curr->package;
+						Pack* pack = (Pack*)pPackage->pack;
 						obj = pack->obj;
 						count = pack->count;
 					}
@@ -687,20 +653,15 @@ namespace Jotunheimr
 							if (!packer[i].hThread)
 							{
 								ResetEvent(packer[i].hEvent);
-								packer[i].bDone = packer[i].package == NULL;
+								packer[i].bDone = packer[i].pPackage == NULL;
 								packer[i].hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PackerThread, (packer + i), 0, NULL);
 							}
 							if (packer[i].bDone)
 							{
-								packer[i].package = curr;
+								packer[i].pPackage = pPackage;
 
 								checker.mtx.lock();
-
-								prev->pNext = curr->pNext;
-								curr = prev;
-								if (curr->pNext == end)
-									end->pNext = curr;
-
+								checker.packageList.Remove(false);
 								checker.mtx.unlock();
 
 								packer[i].bDone = false;
@@ -731,12 +692,14 @@ namespace Jotunheimr
 					if (WaitForSingleObject(packer->hEvent, INFINITE) != WAIT_OBJECT_0)
 						throw 0;
 
-				Package* package = packer->package;
-				if (package != NULL)
+				Package* pPackage = packer->pPackage;
+				if (pPackage != NULL)
 				{
-					if (package->type == TO::ANIM)
+					BYTE type = pPackage->type;
+					WORD ID = pPackage->ID;
+					if (pPackage->type == TO::ANIM)
 					{
-						Anim* anim = (Anim*)package->package;
+						Anim* anim = (Anim*)pPackage->pack;
 						Res** obj = anim->obj;
 						Frame* frame = anim->frame;
 						BYTE count = anim->count;
@@ -751,12 +714,12 @@ namespace Jotunheimr
 						}
 						anim->spriteanim = spriteanim;
 
-						ResList[package->type][package->ID].loc = anim;
-						ResList[package->type][package->ID].state = 2; //Loaded
+						ResList[type][ID].loc = anim;
+						ResList[type][ID].state = 2; //Loaded
 					}
-					else if (package->type == TO::PACK)
+					else if (pPackage->type == TO::PACK)
 					{
-						Pack* pack = (Pack*)package->package;
+						Pack* pack = (Pack*)pPackage->pack;
 						Res** obj = pack->obj;
 						BYTE count = pack->count;
 						void** fullpack = new void*[count];
@@ -764,13 +727,13 @@ namespace Jotunheimr
 							fullpack[i] = obj[i]->loc;
 						pack->pack = fullpack;
 
-						ResList[package->type][package->ID].loc = pack;
-						ResList[package->type][package->ID].state += 1; //Loading -> Loaded || Mapping -> Mapped
+						ResList[type][ID].loc = pack;
+						ResList[type][ID].state += 1; //Loading -> Loaded || Mapping -> Mapped
 					}
 				}
 
-				delete package;
-				packer->package = NULL;
+				delete pPackage;
+				packer->pPackage = NULL;
 				packer->bDone = true;
 			}
 		}

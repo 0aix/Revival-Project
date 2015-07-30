@@ -124,13 +124,10 @@
     <ClCompile Include="World.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ShamooBall.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Physics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Misc.cpp">
+    <ClCompile Include="Ball.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

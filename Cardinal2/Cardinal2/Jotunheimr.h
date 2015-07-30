@@ -31,8 +31,9 @@ struct FILEVIEW
 	DWORD dwSize = 0; //This is the size of the file view, not the range!
 	DWORD dwOffset = 0;
 	DWORD dwRef = 0;
-	FILEVIEW* pNext = NULL;
 };
+
+typedef LList<FILEVIEW> FILEVIEWList;
 
 struct Res
 {
@@ -123,30 +124,19 @@ struct Manager
 {
 	HANDLE hThread;
 	HANDLE hEvent;
-	ItemList* pItemList;
-	FILEVIEW* fView[5];
+	ItemList itemList;
+	FILEVIEWList fViewList[5];
 	DWORD fViewSize[5];
 	mutex mtx;
 
-	Manager()
-	{
-		hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-		pBase->pNext = pEnd;
-		pEnd->pNext = pBase;
-	}
+	Manager() { hEvent = CreateEvent(NULL, FALSE, FALSE, NULL); }
 
 	~Manager()
 	{
-		Item* curr = pBase->pNext;
-		Item* temp;
-		while (curr != pEnd)
-		{
-			temp = curr->pNext;
-			delete curr;
-			curr = temp;
-		}
-		delete pBase;
-		delete pEnd;
+		//need to unmap...
+		//for (int i = 0; i < 5; i++)
+		//	fViewList[i].RemoveAll();
+		itemList.RemoveAll();
 		CloseHandle(hEvent);
 		CloseHandle(hThread);
 	}
@@ -173,7 +163,7 @@ struct Package
 {
 	BYTE type;
 	WORD ID;
-	void* package;
+	void* pack;
 };
 
 typedef LList<Package> PackageList;
@@ -182,28 +172,14 @@ struct Checker
 {
 	HANDLE hThread;
 	HANDLE hEvent;
-	PackageList* pPackageList;
+	PackageList packageList;
 	mutex mtx;
 
-	Checker()
-	{
-		hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-		pBase->pNext = pEnd;
-		pEnd->pNext = pBase;
-	}
+	Checker() { hEvent = CreateEvent(NULL, FALSE, FALSE, NULL); }
 
 	~Checker()
 	{
-		Package* curr = pBase->pNext;
-		Package* temp;
-		while (curr != pEnd)
-		{
-			temp = curr->pNext;
-			delete curr;
-			curr = temp;
-		}
-		delete pBase;
-		delete pEnd;
+		packageList.RemoveAll();
 		CloseHandle(hEvent);
 		CloseHandle(hThread);
 	}

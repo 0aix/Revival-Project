@@ -13,12 +13,10 @@ protected:
 	//Stuff...
 };
 
-//This might be utterly useless
+//This might be utterly useless and can be replaced with just a ViewList or IView
 class ViewManager
 {
 public:
-	ViewManager() { pViewBase = new ViewList; }
-
 	void Release(); //must delete itself and all views
 	void Update();
 	void HandleInput();
@@ -27,5 +25,5 @@ public:
 	void AddView(IView* view);
 
 private:
-	ViewList* pViewList;
+	ViewList viewList;
 };

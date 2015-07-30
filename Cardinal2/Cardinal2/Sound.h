@@ -20,6 +20,8 @@ public:
 	IXAudio2SourceVoice* pSourceVoice = NULL;
 	bool bDone = false;
 
+	~RAWSFX() { Kill(); }
+
 	void Kill()
 	{
 		if (pSourceVoice)
@@ -49,20 +51,16 @@ struct Sound
 	OggVorbis_File* vf = NULL;
 	WAVEFORMATEX wfm;
 
-	~Sound()
-	{
-		if (!vf)
-			ov_clear(vf);
-	}
+	~Sound() { ov_clear(vf); }
 };
 
 typedef LList<Sound> SoundList;
 
-class Voice : public IXAudio2VoiceCallback //ver 1 no error-checking
+class Voice : public IXAudio2VoiceCallback //ver 1 too much error-checking and mutexes
 {
 public:
 	Voice(IXAudio2* pAudio) { pXAudio2 = pAudio; }
-	~Voice();
+	~Voice() { soundList.RemoveAll(); }
 	void Start();
 	void Pause();
 	void Stop();
@@ -71,7 +69,7 @@ public:
 	void Queue(Sound* pSound);
 	void Next();
 	void Stream();
-	void Destroy();
+	void Exit();
 
 	void SetVolume(float volume);
 	float GetVolume();
@@ -100,10 +98,9 @@ public:
 private:
 	std::mutex mtx;
 	IXAudio2* pXAudio2;
-	SoundList* pSoundList = NULL;
+	SoundList soundList;
 	BYTE buffers[VOICE_BUFFER_COUNT][VOICE_BUFFER_SIZE];
 	BYTE currentBuffer = 0;
-	bool bDone = false;
 	bool bLoop = false;
 
 };

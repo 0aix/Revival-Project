@@ -19,7 +19,7 @@
 Shamoo::Shamoo()
 {
 	pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	circle = Circle(0.0, 0.0, 0.0, 0.0, C::RADIUS, 1.0 / MASS, 0.5);
+	circle = Circle(0.0, 0.0, 0.0, 0.0, C::RADIUS, 1.0 / MASS, 0.2);
 	speed = 0.0;
 	accel = 0.0;
 	angular = 0.0;
@@ -54,6 +54,23 @@ void Shamoo::Update()
 		sp = min(sp + spregen, MAX_SP);
 		mp = min(mp + mpregen, MAX_MP);
 		gp = min(gp + gpregen, MAX_GP);
+	}
+
+	if (lock >= 0)
+		lock--;
+	if (buffer >= 0)
+		buffer--;
+	if (cast > 0)
+	{
+		if (--cast == 0)
+		{
+			if (state == S::ATTACK)
+				Attack();
+			else if (state == S::SKILL)
+				Skill();
+			else if (state == S::ULT)
+				Ult();
+		}
 	}
 
 	//DISCRETE IMPLEMENTATION
@@ -105,23 +122,6 @@ void Shamoo::Update()
 	pos.y = circle.pos.y;
 	radian = fmod(radian, C::TWOPI);
 
-	if (lock >= 0)
-		lock--;
-	if (buffer >= 0)
-		buffer--;
-	if (cast > 0)
-	{
-		if (--cast == 0)
-		{
-			if (state == S::ATTACK)
-				Attack();
-			else if (state == S::SKILL)
-				Skill();
-			else if (state == S::ULT)
-				Ult();
-		}
-	}
-
 	//Handle inputs last
 	if (lock < 0)
 	{
@@ -142,22 +142,14 @@ void Shamoo::Update()
 	}
 
 	//actually, update balls last
-	BallList* pBallNode = pBallBase;
-	BallList** pBallPrev = &pBallBase;
-	while (pBallNode != NULL)
+	IBall* pBall = ballList.Begin();
+	while (pBall != NULL)
 	{
-		IBall* pBall = pBallNode->pData;
 		if (!pBall->Update())
-		{
-			BallList* pNext = pBallNode->pNext;
-			delete pBall;
-			delete pBallNode;
-			pBallNode = pNext;
-			*pBallPrev = pNext;
-			continue;
-		}
-		pBallPrev = &pBallNode->pNext;
-		pBallNode = pBallNode->pNext;
+			ballList.Remove(true);
+		else
+			ballList.Next();
+		pBall = ballList.At();
 	}
 
 	//ok ok, update animations last, serious serious
@@ -239,19 +231,15 @@ void Shamoo::Attack()
 		//Time to cast...
 		cast = -1;
 		state = S::ATTCAST;
-		BallList* pBallList = new BallList;
-		pBallList->pData = new Shamoo_Attack(this);
-		pBallList->pNext = pBallBase;
-		pBallBase = pBallList;
+		ballList.Queue(new Shamoo_Attack(this));
 	}
 	else if (sp >= 20.0)
 	{
 		cast = 80; //0.400 secs
 		lock = 100;//0.500 secs
 		sp -= 20.0; //subtract on cast instead?
+		canMove = false;
 		state = S::ATTACK;
-
-
 	}
 }
 
@@ -261,16 +249,14 @@ void Shamoo::Skill()
 	{
 		cast = -1;
 		state = S::SKILLCAST;
-		BallList* pBallList = new BallList;
-		pBallList->pData = new Shamoo_Skill(this);
-		pBallList->pNext = pBallBase;
-		pBallBase = pBallList;
+		ballList.Queue(new Shamoo_Skill(this));
 	}
 	else if (mp >= 40.0)
 	{
 		cast = 20; //0.100 secs
 		lock = 25;//0.125 secs
 		mp -= 40.0; //subtract on cast instead?
+		canMove = false;
 		state = S::SKILL;
 	}
 }
@@ -282,9 +268,7 @@ void Shamoo::Ult()
 		cast = -1;
 		state = S::ULTCAST;
 		BallList* pBallList = new BallList;
-		pBallList->pData = new Shamoo_Ult(this);
-		pBallList->pNext = pBallBase;
-		pBallBase = pBallList;
+		ballList.Queue(new Shamoo_Ult(this));
 	}
 	else if (mp >= 250.0)
 	{
@@ -292,9 +276,8 @@ void Shamoo::Ult()
 		lock = 240;//1.200 secs
 		buffer = -1;
 		mp -= 250.0; //subtract on cast instead?
+		canMove = false;
 		state = S::ULT;
-
-
 	}
 }
 
@@ -305,6 +288,7 @@ void Shamoo::Shield()
 
 void Shamoo::Neutral()
 {
+	canMove = true;
 	state = S::NOP;
 }
 

@@ -5,8 +5,8 @@ namespace Audio
 {
 	IXAudio2* pXAudio2;
 	IXAudio2MasteringVoice* pMasteringVoice;
-	RAWSFXList* pRAWSFXBase;
-	VoiceList* pVoiceBase;
+	RAWSFXList rawSFXList;
+	VoiceList voiceList;
 	std::mutex mtx1; //For RAWSFX
 	std::mutex mtx2; //For Voice
 
@@ -29,39 +29,17 @@ namespace Audio
 		if (FAILED(pXAudio2->CreateMasteringVoice(&pMasteringVoice)))
 			return false;
 
-		pRAWSFXBase = new RAWSFXList;
-		pVoiceBase = new VoiceList;
-
 		return true;
 	}
 
 	void Uninitialize()
 	{
-		RAWSFXList* curr1 = pRAWSFXBase->pNext;
-		RAWSFXList* temp1;
 		mtx1.lock();
-		while (curr1 != NULL)
-		{
-			temp1 = curr1;
-			curr1 = curr1->pNext;
-			temp1->pData->Kill();
-			delete temp1->pData;
-			delete temp1;
-		}
-		delete pRAWSFXBase;
+		rawSFXList.RemoveAll();
 		mtx1.unlock();
 
-		VoiceList* curr2 = pVoiceBase->pNext;
-		VoiceList* temp2;
 		mtx2.lock();
-		while (curr2 != NULL)
-		{
-			temp2 = curr2;
-			curr2 = curr2->pNext;
-			delete temp2->pData;
-			delete temp2;
-		}
-		delete pVoiceBase;
+		voiceList.RemoveAll();
 		mtx2.unlock();
 
 		if (pMasteringVoice)
@@ -75,51 +53,30 @@ namespace Audio
 
 	void Update()
 	{
-		//pRAWSFX is a start node
-		RAWSFXList* prev1 = pRAWSFXBase;
-		RAWSFXList* curr1 = pRAWSFXBase->pNext;
-
 		mtx1.lock();
-
-		while (curr1 != NULL) //iterate through list; remove and free up voices that have exited
+		RAWSFX* pRAWSFX = rawSFXList.Begin();
+		while (pRAWSFX != NULL) //iterate through list; remove and free up sfx that have finished
 		{
-			RAWSFX* pRAWSFX = curr1->pData;
 			if (pRAWSFX->bDone)
-			{
-				prev1->pNext = curr1->pNext;
-				delete pRAWSFX;
-				delete curr1;
-				curr1 = prev1->pNext;
-			}
+				rawSFXList.Remove(true);
+			else
+				rawSFXList.Next();
+			pRAWSFX = rawSFXList.At();
 		}
-
 		mtx1.unlock();
 
-		//pVoiceBase is a start node
-		VoiceList* prev2 = pVoiceBase;
-		VoiceList* curr2 = pVoiceBase->pNext;
-
 		mtx2.lock();
-
-		while (curr2 != NULL) //iterate through list; remove and free up voices that have exited
+		Voice* pVoice = voiceList.Begin();
+		while (pVoice != NULL) //iterate through list; remove and free up voices that have exited
 		{
-			Voice* pVoice = curr2->pData;
 			if (pVoice->bRunning)
 				pVoice->Stream();
-			if (!pVoice->bExit)
-			{
-				prev2 = curr2;
-				curr2 = curr2->pNext;
-			}
+			if (pVoice->bExit)
+				voiceList.Remove(true);
 			else
-			{
-				prev2->pNext = curr2->pNext;
-				delete pVoice;
-				delete curr2;
-				curr2 = prev2->pNext;
-			}
+				voiceList.Next();
+			pVoice = voiceList.At();
 		}
-
 		mtx2.unlock();
 	}
 
@@ -171,12 +128,7 @@ namespace Audio
 		}
 
 		mtx1.lock();
-
-		RAWSFXList* node = new RAWSFXList;
-		node->pData = sfx;
-		node->pNext = pRAWSFXBase->pNext;
-		pRAWSFXBase->pNext = node;
-
+		rawSFXList.Push(sfx);
 		mtx1.unlock();
 		return sfx;
 	}
@@ -206,13 +158,8 @@ namespace Audio
 	Voice* CreateVoice()
 	{
 		mtx2.lock();
-
 		Voice* voice = new Voice(pXAudio2);
-		VoiceList* node = new VoiceList;
-		node->pData = voice;
-		node->pNext = pVoiceBase->pNext;
-		pVoiceBase->pNext = node;
-
+		voiceList.Push(voice);
 		mtx2.unlock();
 		return voice;
 	}

@@ -1,101 +1,58 @@
 #include "stdafx.h"
 #include "Sound.h"
 
-Voice::~Voice()
-{
-	SoundList* curr = pSoundFirst;
-	SoundList* temp;
-	while (curr != NULL)
-	{
-		temp = curr;
-		curr = curr->pNext;
-		delete temp;
-	}
-}
-
 void Voice::Queue(Sound* pSound)
 {
 	if (bExit)
 		return;
 
-	mtx.lock();
-
-	if (pSoundFirst == NULL)
-	{
-		pSoundFirst = new SoundList;
-		pSoundFirst->pData = pSound;
-		pSoundLast = pSoundFirst;
-	}
-	else //assert pSoundLast != NULL
-	{
-		SoundList* temp = new SoundList;
-		temp->pData = pSound;
-		pSoundLast->pNext = temp;
-		pSoundLast = temp;
-	}
-
-	mtx.unlock();
+	soundList.Queue(pSound);
 }
 
 void Voice::Next()
 {
-	if (bExit)
-		return;
-
-	mtx.lock();
-
 	if (bLoop)
 	{
-		pSoundLast->pNext = pSoundFirst;
-		pSoundLast = pSoundFirst;
-		pSoundFirst = pSoundFirst->pNext;
-		pSoundLast->pNext = NULL;
+		Sound* pSound = soundList.At();
+		soundList.Remove(false);
+		soundList.Queue(pSound);
 	}
-	else
-	{
-		SoundList* temp = pSoundFirst->pNext;
-		delete pSoundFirst;
-		pSoundFirst = temp;
-	}
-
-	mtx.unlock();
+	else 
+		soundList.Remove(false);
 }
 
 void Voice::Start()
 {
-	if (bRunning || bExit)
+	if (bRunning)
 		return;
 
-	mtx.lock();
+	Sound* pSound = soundList.At();
 
-	if (!pSoundFirst)
+	if (!pSound)
 		return;
-	if (FAILED(pXAudio2->CreateSourceVoice(&pSourceVoice, &pSoundFirst->pData->wfm, 0, XAUDIO2_DEFAULT_FREQ_RATIO, this, NULL, NULL)))
+	if (FAILED(pXAudio2->CreateSourceVoice(&pSourceVoice, &pSound->wfm, 0, XAUDIO2_DEFAULT_FREQ_RATIO, this, NULL, NULL)))
 		return;
 	if (FAILED(pSourceVoice->Start()))
 	{
 		pSourceVoice->DestroyVoice();
-		mtx.unlock();
 		return;
 	}
+
 	Stream();
-	bDone = false;
 	bPaused = false;
 	bRunning = true;
-
-	mtx.unlock();
 }
 
 void Voice::Stream()
 {
-	if (!bRunning || bDone || bExit)
+	if (!bRunning || bExit || !pSourceVoice)
 		return;
 
 	XAUDIO2_VOICE_STATE state;
 	pSourceVoice->GetState(&state);
 	for (int i = state.BuffersQueued; i < VOICE_BUFFER_COUNT; i++)
 	{
-		OggVorbis_File* vf = pSoundFirst->pData->vf;
+		OggVorbis_File* vf = soundList.At()->vf;
 
 		memset(buffers[currentBuffer], 0, VOICE_BUFFER_SIZE);
 
@@ -116,7 +73,6 @@ void Voice::Stream()
 		{
 			ov_pcm_seek(vf, 0);
 			buffer.Flags = XAUDIO2_END_OF_STREAM;
-			bDone = true;
 		}
 
 		if (FAILED(pSourceVoice->SubmitSourceBuffer(&buffer)))
@@ -129,10 +85,8 @@ void Voice::Stream()
 
 void Voice::Pause()
 {
-	if (!bRunning || bExit)
+	if (!pSourceVoice)
 		return;
-
-	mtx.lock();
 
 	if (bPaused)
 		pSourceVoice->Start();
@@ -140,34 +94,24 @@ void Voice::Pause()
 		pSourceVoice->Stop();
 
 	bPaused = !bPaused;
-
-	mtx.unlock();
 }
 
 void Voice::Stop()
 {
-	if (!bRunning || bExit)
+	if (!pSourceVoice)
 		return;
-
-	mtx.lock();
 
 	pSourceVoice->Stop();
 	pSourceVoice->DestroyVoice();
 	bRunning = false;
-
-	mtx.unlock();
 }
 
 void Voice::Loop()
 {
-	mtx.lock();
-
 	bLoop = !bLoop;
-
-	mtx.unlock();
 }
 
-void Voice::Destroy()
+void Voice::Exit()
 {
 	if (bExit)
 		return;
@@ -178,6 +122,9 @@ void Voice::Destroy()
 
 void Voice::SetVolume(float volume)
 {
+	if (!pSourceVoice)
+		return;
+
 	pSourceVoice->SetVolume(volume);
 }
 
