@@ -93,4 +93,25 @@ namespace Graphics
 //		block[row * 256 + col] = 0xFFFF0000;
 //texture->UnlockRect(0);
 
-//NOTE: UPDATESURFACE AND UPDATETEXTURE CAN BE USED TO MISH-MASH DIFFERENT TEXTURES TOGETHER
+//METHOD 1X (REPLACE DEPTH STENCIL BUFFER IF YOUR NEW TEXTURE IS LARGER THAN THE SCREEN)
+//d3ddev->CreateTexture(width, height, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &texture, NULL);
+//IDirect3DSurface9* backTarget;
+//d3ddev->GetRenderTarget(0, &backTarget);
+//IDirect3DSurface9* surfTarget;
+//texture->GetSurfaceLevel(0, &surfTarget);
+//d3ddev->SetRenderTarget(0, surfTarget);
+////since this thing is larger than the screen, im gonna replace the depth stencil buffer
+//IDirect3DTexture9* stencil;
+//d3ddev->CreateTexture(width, height, 1, D3DUSAGE_DEPTHSTENCIL, D3DFMT_D16, D3DPOOL_DEFAULT, &stencil, NULL);
+//IDirect3DSurface9* backStencil;
+//d3ddev->GetDepthStencilSurface(&backStencil);
+//IDirect3DSurface9* surfStencil;
+//stencil->GetSurfaceLevel(0, &surfStencil);
+//d3ddev->SetDepthStencilSurface(surfStencil);
+//d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, 0xFF000000, 1.0f, 0);
+//d3ddev->SetDepthStencilSurface(backStencil);
+//d3ddev->SetRenderTarget(0, backTarget);
+//surfTarget->Release();
+//surfStencil->Release();
+//backStencil->Release();
+//backTarget->Release();

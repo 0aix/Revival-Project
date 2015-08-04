@@ -23,8 +23,6 @@ LoadScene::LoadScene() : IScene()
 	{
 		buffer[n].x = 128.0f + radius * cos(radian);
 		buffer[n].y = 128.0f + radius * sin(radian);
-		buffer[n].z = 0.0f;
-		buffer[n].rhw = 1.0f;
 		buffer[n].color = 0xFFFF1414;
 		radian += step;
 	}
@@ -78,12 +76,20 @@ LoadScene::LoadScene() : IScene()
 	Cardinal::SetState(1, texture);
 
 	//Creating tile map using method 1
-	d3ddev->CreateTexture(2304, 1792, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &texture, NULL);
+	//Does not work for non-integer height/width
+	//Should probably not be loaded here.
+	double width = C::SCREEN_WIDTH + C::METER;
+	double height = C::SCREEN_HEIGHT + C::METER;
+	int iwidth = width / C::METER;
+	int iheight = height / C::METER;
+	int count = iwidth * iheight;
+	VERTEX_2D_DIF* buff = new VERTEX_2D_DIF[count * 4];
+	d3ddev->CreateTexture(width, height, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &texture, NULL);
 	texture->GetSurfaceLevel(0, &surfTarget);
 	d3ddev->SetRenderTarget(0, surfTarget);
 	//since this thing is larger than the screen, im gonna replace the depth stencil buffer
 	IDirect3DTexture9* stencil;
-	d3ddev->CreateTexture(2304, 1792, 1, D3DUSAGE_DEPTHSTENCIL, D3DFMT_D16, D3DPOOL_DEFAULT, &stencil, NULL);
+	d3ddev->CreateTexture(width, height, 1, D3DUSAGE_DEPTHSTENCIL, D3DFMT_D16, D3DPOOL_DEFAULT, &stencil, NULL);
 	IDirect3DSurface9* backStencil;
 	d3ddev->GetDepthStencilSurface(&backStencil);
 	IDirect3DSurface9* surfStencil;
@@ -92,27 +98,26 @@ LoadScene::LoadScene() : IScene()
 	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, 0xFF000000, 1.0f, 0);
 	d3ddev->BeginScene();
 	int i = 0;
-	for (int x = 0; x < 9; x++)
+	for (int x = 0; x < iwidth; x++)
 	{
 		float px = x * 256.0f;
-		for (int y = 0; y < 7; y++)
+		for (int y = 0; y < iheight; y++)
 		{
 			float py = y * 256.0f;
-			buffer[i].x = px + 5.0f;
-			buffer[i].y = py + 5.0f;
-			buffer[i + 3].x = px + 5.0f;
-			buffer[i + 3].y = py + 251.0f;
-			buffer[i + 2].x = px + 251.0f;
-			buffer[i + 2].y = py + 251.0f;
-			buffer[i + 1].x = px + 251.0f;
-			buffer[i + 1].y = py + 5.0f;
+			buff[i].x = px + 5.0f;
+			buff[i].y = py + 5.0f;
+			buff[i + 3].x = px + 5.0f;
+			buff[i + 3].y = py + 251.0f;
+			buff[i + 2].x = px + 251.0f;
+			buff[i + 2].y = py + 251.0f;
+			buff[i + 1].x = px + 251.0f;
+			buff[i + 1].y = py + 5.0f;
 			i += 4;
 		}
 	}
-	for (int n = 0; n < 252; n++)
-		buffer[n].color = 0xFFFFFFFF;
-	for (int n = 0; n < 63; n++)
-		d3ddev->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, buffer + n * 4, sizeof(VERTEX_2D_DIF));
+	for (int n = 0; n < count; n++)
+		d3ddev->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, buff + n * 4, sizeof(VERTEX_2D_DIF));
+	delete[] buff;
 	d3ddev->EndScene();
 	d3ddev->SetDepthStencilSurface(backStencil);
 	surfTarget->Release();

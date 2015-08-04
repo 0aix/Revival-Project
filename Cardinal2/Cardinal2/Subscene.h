@@ -18,7 +18,7 @@ protected:
 class WorldScene : public ISubscene
 {
 public:
-	WorldScene();
+	WorldScene(int width, int length, int cap);
 	void Release();
 	void Update();
 	void HandleInput();
@@ -36,4 +36,8 @@ private:
 	IDirect3DTexture9* circle = NULL;
 	IDirect3DTexture9* arrow = NULL;
 	IDirect3DTexture9* tile = NULL;
+
+	D3DXVECTOR3 camera_offset;
+	double xbound;
+	double ybound;
 };

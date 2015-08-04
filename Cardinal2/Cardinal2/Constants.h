@@ -12,7 +12,7 @@ namespace C
 
 	const int WINDOW_WIDTH = 800;
 	const int WINDOW_HEIGHT = 600;
-	const double SCREEN_WIDTH = 8.0 * METER;
+	const double SCREEN_WIDTH = 16.0 * METER;
 	const double RATIO = WINDOW_WIDTH / SCREEN_WIDTH;
 	const double SCREEN_HEIGHT = WINDOW_HEIGHT / RATIO;
 	const double CENTER_X = SCREEN_WIDTH / 2.0;

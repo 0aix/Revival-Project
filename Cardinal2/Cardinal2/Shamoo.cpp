@@ -20,7 +20,6 @@ Shamoo::Shamoo()
 {
 	pos = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
 	circle = Circle(0.0, 0.0, 0.0, 0.0, C::RADIUS, 1.0 / MASS, 0.2);
-	speed = 0.0;
 	accel = 0.0;
 	angular = 0.0;
 	radian = 0.0;

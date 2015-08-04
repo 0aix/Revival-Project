@@ -4,8 +4,8 @@
 
 struct VERTEX_2D_DIF
 {
-	float x, y, z, rhw;
-	DWORD color;
+	float x, y, z = 0.0f, rhw = 1.0f;
+	DWORD color = 0xFFFFFFFF;
 	
 	static const DWORD DIF2DFVF = D3DFVF_XYZRHW | D3DFVF_DIFFUSE;
 };

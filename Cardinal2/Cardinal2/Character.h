@@ -33,7 +33,6 @@ public:
 
 	D3DXVECTOR3 pos;
 	Circle circle;
-	double speed;
 	double accel;
 	double angular; //angular speed
 	double radian; //direction

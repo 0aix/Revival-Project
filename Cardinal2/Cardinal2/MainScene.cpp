@@ -4,7 +4,7 @@
 MainScene::MainScene() : IScene()
 {
 	pScenes = new ISubscene*;
-	pScenes[0] = new WorldScene;
+	pScenes[0] = new WorldScene(16, 12, 2);
 }
 
 void MainScene::Release() 
