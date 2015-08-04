@@ -1,9 +1,9 @@
-#ifndef JOTUNHEIMR_H
-#define JOTUNHEIMR_H
+#pragma once
 
-#include "Main.h"
+#include "Windows.h"
 #include "Sprite.h"
 #include "TO.h"
+using namespace std;
 
 namespace TO
 {
@@ -31,8 +31,9 @@ struct FILEVIEW
 	DWORD dwSize = 0; //This is the size of the file view, not the range!
 	DWORD dwOffset = 0;
 	DWORD dwRef = 0;
-	FILEVIEW* pNext = NULL;
 };
+
+typedef LList<FILEVIEW> FILEVIEWList;
 
 struct Res
 {
@@ -64,7 +65,7 @@ struct Anim
 		loops = loopcount;
 	}
 
-	~Anim() 
+	~Anim()
 	{
 		delete[] obj;
 		delete[] frame;
@@ -88,7 +89,7 @@ struct Pack
 		count = size;
 	}
 
-	~Pack() 
+	~Pack()
 	{
 		delete[] obj;
 		delete[] type;
@@ -115,40 +116,27 @@ struct Item
 {
 	BYTE type;
 	WORD ID;
-	Item* pNext = NULL;
 };
+
+typedef LList<Item> ItemList;
 
 struct Manager
 {
 	HANDLE hThread;
 	HANDLE hEvent;
-	Item* pBase;
-	Item* pEnd;
-	FILEVIEW* fView[5];
+	ItemList itemList;
+	FILEVIEWList fViewList[5];
 	DWORD fViewSize[5];
 	mutex mtx;
 
-	Manager()
-	{
-		hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-		pBase = new Item;
-		pEnd = new Item;
-		pBase->pNext = pEnd;
-		pEnd->pNext = pBase;
-	}
+	Manager() { hEvent = CreateEvent(NULL, FALSE, FALSE, NULL); }
 
 	~Manager()
 	{
-		Item* curr = pBase->pNext;
-		Item* temp;
-		while (curr != pEnd)
-		{
-			temp = curr->pNext;
-			delete curr;
-			curr = temp;
-		}
-		delete pBase;
-		delete pEnd;
+		//need to unmap...
+		//for (int i = 0; i < 5; i++)
+		//	fViewList[i].RemoveAll();
+		itemList.RemoveAll();
 		CloseHandle(hEvent);
 		CloseHandle(hThread);
 	}
@@ -175,39 +163,23 @@ struct Package
 {
 	BYTE type;
 	WORD ID;
-	void* package;
-	Package* pNext = NULL;
+	void* pack;
 };
+
+typedef LList<Package> PackageList;
 
 struct Checker
 {
 	HANDLE hThread;
 	HANDLE hEvent;
-	Package* pBase;
-	Package* pEnd;
+	PackageList packageList;
 	mutex mtx;
 
-	Checker()
-	{
-		hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-		pBase = new Package;
-		pEnd = new Package;
-		pBase->pNext = pEnd;
-		pEnd->pNext = pBase;
-	}
+	Checker() { hEvent = CreateEvent(NULL, FALSE, FALSE, NULL); }
 
 	~Checker()
 	{
-		Package* curr = pBase->pNext;
-		Package* temp;
-		while (curr != pEnd)
-		{
-			temp = curr->pNext;
-			delete curr;
-			curr = temp;
-		}
-		delete pBase;
-		delete pEnd;
+		packageList.RemoveAll();
 		CloseHandle(hEvent);
 		CloseHandle(hThread);
 	}
@@ -217,7 +189,7 @@ struct Packer
 {
 	HANDLE hThread;
 	HANDLE hEvent;
-	Package* package = NULL;
+	Package* pPackage = NULL;
 	bool bDone = true;
 
 	Packer() { hEvent = CreateEvent(NULL, FALSE, FALSE, NULL); }
@@ -250,5 +222,3 @@ namespace Jotunheimr
 	void CheckerThread();
 	void PackerThread(void* param);
 }
-
-#endif

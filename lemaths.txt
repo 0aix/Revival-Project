@@ -1,0 +1,152 @@
+v = dp/dt
+a = dv/dt
+w = dTheta/dt
+
+
+x = x_0 + cos(
+
+
+
+dx = lim n -> inf ( Sum i = 1 -> n ( cos(rad + i * w/n) / n ) )
+
+
+
+S from rad to rad + w ( cos x ) dx
+
+
+S from 0 to 1 ( cos(rad + w * x) * (v + a * x) ) dx
+
+integral of x cos x dx
+
+d (uv) = du v + u dv
+
+uv = S v du + S u dv
+S u dv = uv - S v du
+
+u = x     dv = cos x dx
+du = dx   v = sin x
+ = x sin x - S sin x dx
+ = x sin x + cos x
+
+CHECK: sin x + x cos x - sin x = x cos x
+
+X:
+
+S from 0 to 1 ( v * cos(rad + wx) + ax * cos(rad + wx) ) dx
+
+S from 0 to 1 (vcos(rad + wx)) dx --------------------------------
+v * (S 0-1 (cos(rad + wx)) dx)
+v/w * (sin (rad + wx) | 0-1)
+v/w * (sin (rad + w) - sin (rad))
+
+S 0-1 (ax * cos(rad + wx)) dx
+a * (S 0-1 (xcos(rad + wx)) dx)
+u = x        dv = cos(rad + wx) dx
+du = dx      v = sin(rad + wx)/w
+a * (x/w * sin(rad + wx) - S (sin(rad + wx)/w) dx) | 0-1
+a * (x/w * sin(rad + wx) + cos(rad + wx)/w^2 ) | 0-1
+a * (sin(rad + w)/w + cos(rad + w)/w^2 - cos(rad)/w^2)
+
+FINAL X: (t from 0-1)
+v/w * (sin (rad + wt) - sin (rad)) + a * (tsin(rad + wt)/w + cos(rad + wt)/w^2 - cos(rad)/w^2)
+
+v/w * (sin (rad + wt) - sin (rad)) + a * (tsin(rad + wt) + (cos(rad + wt) - cos(rad))/w) / w
+
+Y: --------------------------------------------------------
+
+S from 0 to t ( v * sin(rad + wx) + ax * sin(rad + wx) ) dx
+
+S from 0 to t (vsin(rad + wx)) dx
+-v/w * (cos (rad + wx) | 0-t)
+-v/w * (cos (rad + wt) - cos (rad))
+
+
+S 0-t (ax * sin(rad + wx)) dx
+a * (S 0-t (xsin(rad + wx)) dx)
+u = x          dv = sin(rad + wx) dx
+du = dx        v = -cos(rad + wx)/w
+a * (-x/w * cos(rad + wx) + S (cos(rad + wx)/w) dx) | 0-t
+a * (-x/w * cos(rad + wx) + sin(rad + wx)/w^2) | 0-t
+a * (-tcos(rad + wt)/w + sin(rad + wt)/w^2 - sin(rad)/w^2)
+
+FINAL Y: (t from 0-1)
+-v/w * (cos (rad + wt) - cos (rad)) + a * (-tcos(rad + wt) + (sin(rad + wt) - sin(rad))/w) / w
+
+=======================================
+What's the velocity though..?
+dVX:
+S from 0 to t (a * cos(rad + wx)) dx
+a/w * sin(rad + wx) | 0-t
+a/w * (sin(rad + wt) - sin(rad))
+
+
+=====================================================================================
+New rules: (make some only apply to shamoo?)
+**don't forget the dust trails
+**not lava walls
+- if running into wall, no bounce
+  - speed not reset
+- if not running into ball, bounce
+  - reduced velocity
+- if kb'd into wall, bounce
+  - reduced velocity
+- if running into person, push, no bounce
+  - velocity changes
+- if kb'd into person, push, no bounce
+  - velocity changes
+- if kb'd, friction is reduced
+- if running, friction is increased **?
+- if kb'd, running velocity is reset
+- if hit, running velocity can change
+
+
+- or how about really low friction for shamoo all the time..
+
+
+- acceleration on speed -> directed by angle
+- if running, friction does not apply to speed in the direction one is running
+  - it will reduce anything over max speed though
+- if not running, friction applies in the direction one is moving
+- running velocity is separate from moving velocity
+  - acceleration only affects running velocity
+  - deceleration, too
+
+- can always turn but not always move
+  - SP allows turning while attacking (animation changes)
+  - animation direction frozen while kb'd/stun'd
+  - direction updated after going back to normal
+  - shamoo does not followthrough (move according to direction while attacking) but ground characters do
+
+- movement is not a perfect pivot
+
+
+
+----------------------------------
+circles bouncing and stuff and lines
+----------------------------------
+distance circle to line
+----------------------------------
+t [0-1]
+x = PX + (QX - PX)t
+y = PY + (QY - PY)t
+
+dx = x - cx = PX + (QX - PX)t - cx
+dy = y - cy = PY + (QY - PY)t - cy
+
+d^2 = dx^2 + dy^2
+D = d^2 = (PX + (QX - PX)t - cx)^2 + (PY + (QY - PY)t - cy)^2
+dD = [2(PX + (QX - PX)t - cx)(QX - PX) + 2(PY + (QY - PY)t - cy)(QY - PY)] dt
+We want dD/dt = 0
+0 = PX(QX - PX) + [(QX - PX)^2]t - cx(QX - PX) + PY(QY - PY) + [(QY - PY)^2]t - cy(QY - PY)
+0 = (PX - cx)(QX - PX) + [(QX - PX)^2 + (QY - PY)^2]t + (PY - cy)(QY - PY)
+
+-[(PX - cx)(QX - PX) + (PY - cy)(QY - PY)]
+------------------------------------------ = t
+       [(QX - PX)^2 + (QY - PY)^2]
+
+
+-50, 50 -> 50, 50       0, 100; 50
+
+t = -[-50(100) + -50(0)]/[100^2 + 0^2]
+  = 5000/10000 = .5
+
