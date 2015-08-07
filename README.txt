@@ -15,3 +15,10 @@
 
 # assetmanager.txt
 - Asset file structures
+
+#Yggdrasil
+- Server
+- Client
+
+#Alfheimr
+- Server of all servers

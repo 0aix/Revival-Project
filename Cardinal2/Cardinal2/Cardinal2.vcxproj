@@ -120,7 +120,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FloatingPointModel>Strict</FloatingPointModel>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
