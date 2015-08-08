@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include <WS2tcpip.h>
+#include "Network.h"
 #include <stdio.h>
 
 #define SERVER_PORT 17460
@@ -11,30 +11,23 @@ int main()
 		return 0;
 	printf("WSASTARTUP OK\n");
 
-	//TCP
-	/*SOCKET skt = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	SOCKADDR_IN sockaddr;
-	sockaddr.sin_port = htons(17460);
-	sockaddr.sin_family = AF_INET;
-	sockaddr.sin_addr.s_addr = INADDR_ANY;
+	//
+	Socket socket;
+	socket.Open(SERVER_PORT);
 
-	bind(skt, (SOCKADDR*)&sockaddr, sizeof(SOCKADDR_IN));
+	Address to = Address(127, 0, 0, 1, SERVER_PORT);
+	char str[] = "hey what's up";
+	Packet packet;
+	packet.data = str;
+	packet.size = strlen(str);
+	socket.Send(to, packet);
 
-	listen(skt, 1);
+	socket.Close();
 
-	SOCKET sock = accept(skt, NULL, NULL);
 
-	char str[] = "hey what's up \n";
-
-	send(sock, str, strlen(str), 0);
-	
-	shutdown(sock, SD_BOTH);
-	shutdown(skt, SD_BOTH);
-	closesocket(sock);
-	closesocket(skt);*/
 
 	//UDP
-	SOCKET skt = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	/*SOCKET skt = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	SOCKADDR_IN sockaddr;
 	sockaddr.sin_family = AF_INET;
 	sockaddr.sin_addr.s_addr = INADDR_ANY;
@@ -49,11 +42,11 @@ int main()
 	SOCKADDR_IN addr;
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(127 << 24 | 1); //127.0.0.1
-	addr.sin_port = htons(DEFAULT_PORT);
+	addr.sin_port = htons(SERVER_PORT);
 	i = sendto(skt, str, strlen(str), 0, (SOCKADDR*)&addr, sizeof(SOCKADDR_IN));
 
 	shutdown(skt, SD_BOTH);
-	closesocket(skt);
+	closesocket(skt);*/
 
 	WSACleanup();
 	return 0;
