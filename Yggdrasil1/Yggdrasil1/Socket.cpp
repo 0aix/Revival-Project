@@ -37,8 +37,8 @@ void Socket::Close()
 
 bool Socket::Send(Address& dest, Packet& packet)
 {
-	int size = packet.size;
-	return sendto(handle, (char*)packet.data, size, 0, (SOCKADDR*)&dest.addr, sizeof(SOCKADDR_IN)) == size;
+	int length = packet.length;
+	return sendto(handle, (char*)packet.data, length, 0, (SOCKADDR*)&dest.addr, sizeof(SOCKADDR_IN)) == length;
 }
 
 bool Socket::Receive(Address& from, Packet& packet)
@@ -46,8 +46,12 @@ bool Socket::Receive(Address& from, Packet& packet)
 	byte buffer[MAX_PACKET_SIZE];
 	SOCKADDR_IN addr;
 	int size = sizeof(SOCKADDR_IN);
-	if (recvfrom(handle, (char*)buffer, MAX_PACKET_SIZE, 0, (SOCKADDR*)&addr, &size) > 0)
+	int length = recvfrom(handle, (char*)buffer, MAX_PACKET_SIZE, 0, (SOCKADDR*)&addr, &size);
+	if (length > 0)
 	{
+		packet.data = buffer;
+		packet.length = length;
+		packet.index = 0;
 		from = Address(addr);
 		return true;
 	}

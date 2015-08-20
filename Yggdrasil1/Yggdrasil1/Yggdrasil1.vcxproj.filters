@@ -13,11 +13,20 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Header Files\Networking">
+    <Filter Include="Header Files\RP">
+      <UniqueIdentifier>{43249358-d6bb-4219-87db-a440aba450da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\NET">
       <UniqueIdentifier>{958354dd-c4ff-4696-a66e-08446b6c6b5c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Networking">
+    <Filter Include="Source Files\NET">
       <UniqueIdentifier>{1c9bd9bc-c026-4ec4-9698-05f2755fe76d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\MISC">
+      <UniqueIdentifier>{35124268-99a5-4c6c-9437-a8bf24caddf8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\RP">
+      <UniqueIdentifier>{1840d27f-e506-4511-8668-e1df162175e7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -26,16 +35,46 @@
     </ClCompile>
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="Socket.cpp">
-      <Filter>Source Files\Networking</Filter>
+      <Filter>Source Files\NET</Filter>
     </ClCompile>
-    <ClCompile Include="PacketHandler.cpp">
-      <Filter>Source Files\Networking</Filter>
+    <ClCompile Include="World.cpp">
+      <Filter>Source Files\RP</Filter>
+    </ClCompile>
+    <ClCompile Include="Shamoo.cpp">
+      <Filter>Source Files\RP</Filter>
+    </ClCompile>
+    <ClCompile Include="Ball.cpp">
+      <Filter>Source Files\RP</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics.cpp">
+      <Filter>Source Files\RP</Filter>
+    </ClCompile>
+    <ClCompile Include="SocketHandler.cpp">
+      <Filter>Source Files\NET</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Network.h">
-      <Filter>Header Files\Networking</Filter>
+      <Filter>Header Files\NET</Filter>
+    </ClInclude>
+    <ClInclude Include="Ball.h">
+      <Filter>Header Files\RP</Filter>
+    </ClInclude>
+    <ClInclude Include="Character.h">
+      <Filter>Header Files\RP</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics.h">
+      <Filter>Header Files\RP</Filter>
+    </ClInclude>
+    <ClInclude Include="World.h">
+      <Filter>Header Files\RP</Filter>
+    </ClInclude>
+    <ClInclude Include="Misc.h">
+      <Filter>Header Files\MISC</Filter>
+    </ClInclude>
+    <ClInclude Include="Constants.h">
+      <Filter>Header Files\MISC</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

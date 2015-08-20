@@ -5,10 +5,23 @@
 
 int main()
 {
-	WSADATA wsaData;
+	UINT32 q = MapVirtualKey(81, MAPVK_VK_TO_VSC);
+	UINT32 r = MapVirtualKey(82, MAPVK_VK_TO_VSC);
+	while (true)
+	{
+		if (GetAsyncKeyState(VK_MBUTTON) & 0x8000)
+		{
+			keybd_event(82, r, 0, 0);
+			keybd_event(82, r, KEYEVENTF_KEYUP, 0);
+			keybd_event(81, q, 0, 0);
+			keybd_event(81, q, KEYEVENTF_KEYUP, 0);
+		}
+		Sleep(50);
+	}
+	/*WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 		return 0;
-	printf("WSASTARTUP OK\n");
+	printf("WSASTARTUP OK\n");*/
 
 	//TCP
 	/*hostent* host = gethostbyname("localhost");
@@ -29,7 +42,7 @@ int main()
 	closesocket(skt);*/
 
 	//UDP
-	SOCKET skt = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	/*SOCKET skt = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	SOCKADDR_IN sockaddr;
 	sockaddr.sin_family = AF_INET;
 	sockaddr.sin_addr.s_addr = INADDR_ANY;
@@ -56,6 +69,6 @@ int main()
 	closesocket(skt);
 
 	WSACleanup();
-	getchar();
+	getchar();*/
 	return 0;
 }
