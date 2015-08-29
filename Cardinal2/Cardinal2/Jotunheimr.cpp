@@ -505,9 +505,9 @@ namespace Jotunheimr
 							buffer->pBase = base;
 							buffer->dwSize = size;
 							RAWSOUND* raw = Audio::CreateRAWSOUND(buffer);
+							delete buffer;
 							if (!raw)
 								throw 0;
-							delete buffer;
 							ResList[type][ID].loc = raw;
 							ResList[type][ID].state = 2; //Loaded
 						}
