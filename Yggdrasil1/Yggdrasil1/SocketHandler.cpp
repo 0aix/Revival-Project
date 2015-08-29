@@ -23,7 +23,7 @@ const byte ServerHandler::header[4] = { 'T', 'R', 'P', 'H' };
 
 ServerHandler::ServerHandler(int maxconn) : ISocketHandler(1)
 {
-	client = new Client*[maxconn];
+	client = new Connection*[maxconn];
 
 	world = new World(16, 12, maxconn);
 	maxCount = maxconn;
@@ -46,48 +46,43 @@ ServerHandler::~ServerHandler()
 
 void ServerHandler::Receive()
 {
-	byte* data = packet.data;
-	while (socket.Receive(from, packet))
-	{
-		int length = packet.length;
-		if (length > 6 && memcmp(header, data, 4) == 0) //"TRPH__" has length 6
-		{
-			packetID = *(WORD*)(data + 4);
-			packet.index = 6;
-			while (packet.index < length);
-				Handle();
-		}
-	}
+	byte data[4];
+	while (socket.Receive(packet.addr, packet.recv))
+		if (packet.recv.ReadBytes(data, 4)
+			&& memcmp(header, data, 4)
+			&& packet.recv.Read<UINT16>(packet.recv_id)) //"TRPH__" has length 6
+			while (Handle());
 }
 
-void ServerHandler::Handle()
+bool ServerHandler::Handle()
 {
 	//Get packet category
-	byte func = *(packet.data + packet.index);
+	byte func;
+	if (!packet.recv.Read<byte>(func))
+		return false;
 
 	//Check if address is recognized
-	unsigned long ip = from.address;
-	unsigned short port = from.port;
+	unsigned long ip = packet.addr.address;
+	unsigned short port = packet.addr.port;
 	bool exists = false;
 	for (int i = 0; i < maxCount; i++)
 	{
-		Client* user = client[i];
-		if (user != NULL)
+		Connection* user = client[i];
+		if (user != NULL && ip == user->addr.address && port == user->addr.port)
 		{
-			if (ip == user->addr.address && port == user->addr.port)
-			{
-				exists = true;
-				break;
-			}
+			exists = true;
+			break;
 		}
 	}
 
-	if (!exists && func != 0x00) //If the connection doesn't exist, the packet must be a connection request
-		return;
-
-	packet.index++;
-	if (func < tableCount)
+	//Either it exists and it's not a connection request or vice-versa
+	//Check if funcTable[func] exists
+	if (exists ^ (func == 0x00) && func < tableCount && funcTable[func] != NULL)
+	{
 		funcTable[func](this);
+		return true;
+	}
+	return false;
 }
 
 void ServerHandler::Update()
@@ -105,47 +100,49 @@ void ServerHandler::Broadcast()
 void ServerHandler::Connect(ISocketHandler* handler)
 {
 	ServerHandler* server = (ServerHandler*)handler;
-	Packet packet = server->packet;
-	Address addr = server->from;
-	byte* data = packet.data + packet.index;
-	int length = packet.length - packet.index;
-	if (length == 0) //'TRPH' 00 - No extra data; simple connection request
+	PacketHandler packet = server->packet;
+	byte data[8];
+	if (packet.send.ReadyToWrite())
 	{
-		//Set-up packet
-		Packet response(15);
-		byte* buffer = response.data;
-		memcpy(buffer, header, 4);
-		memset(buffer + 3, 0, 3);
-		int max = server->maxCount;
-		if (server->playerCount < max)
+		packet.send.WriteBytes((byte*)header, 4);
+		if (!packet.recv.ReadBytes(data, 8)) //'TRPH__' 00 - No extra data; simple connection request
 		{
-			UINT64 id = UINT64((DWORD)rand() * addr.address) << 32 & ((DWORD)rand() * addr.port) + rand(); //used for reconnection req.
+			packet.send.Write<UINT16>(0x0000); //packet send seq
+			packet.send.Write<byte>(0x00); //packet type - connection
+			int maxCount = server->maxCount;
+			if (server->playerCount < maxCount)
+			{
+				//8 bytes used for some requests
+				DWORD hi = (DWORD)rand() * packet.addr.address;
+				DWORD lo = (DWORD)rand() * packet.addr.port + rand();
 
-			//'TRPH' 00 00 00 ? ? ? ? ? ? ? ?
-			*(UINT64*)(buffer + 7) = id;
+				//'TRPH' 00 00 00 ? ? ? ? ? ? ? ?
+				packet.send.Write<DWORD>(lo);
+				packet.send.Write<DWORD>(hi);
 
-			//Add player to server
-			Client* user = new Client();
-			user->addr = addr;
-			user->id = id;
-			user->player = new Shamoo();
+				//Look for vacant connection (has to be > 0)
+				Connection** client = server->client;
+				int i = 0;
+				for (; i < maxCount; i++)
+					if (!client[i])
+						break;
 
-			Client** client = server->client;
-			int i = 0;
-			for (; i < max; i++)
-				if (!client[i])
-					break;
+				//Add player to server / character to world
+				Connection* user = new Connection;
+				user->addr = packet.addr;
+				user->hi = hi;
+				user->lo = lo;
+				user->player = new Shamoo;
 
-			client[i] = user;
-			server->world->players[i] = user->player;
-			server->playerCount++;
+				client[i] = user;
+				server->world->players[i] = user->player;
+				server->playerCount++;
+			}
+			//Denied connection looks like 'TRPH__' 00
+			server->socket.Send(packet.addr, packet.send);
 		}
-		else //Deny connection (no identifier) - 'TRPH' 00 00 00
-			response.length = 7;
-
-		server->socket.Send(addr, response);
 	}
-	else if (length == 8)//if length == 8, check for reconnection request : 8 byte identifier
+	else //Check for reconnection request : 8 byte identifier
 	{
 		
 	}

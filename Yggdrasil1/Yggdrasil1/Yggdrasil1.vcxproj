@@ -133,6 +133,7 @@
   <ItemGroup>
     <ClCompile Include="Ball.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Packet.cpp" />
     <ClCompile Include="Physics.cpp" />
     <ClCompile Include="Shamoo.cpp" />
     <ClCompile Include="Socket.cpp" />

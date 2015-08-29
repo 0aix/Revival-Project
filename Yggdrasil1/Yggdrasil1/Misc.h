@@ -27,6 +27,14 @@ struct GameClock
 
 		return elapsed;
 	}
+
+	double TicksInSeconds()
+	{
+		LARGE_INTEGER li;
+		QueryPerformanceCounter(&li);
+
+		return (double)li.QuadPart / frequency;
+	}
 };
 
 struct BUFFER
@@ -41,7 +49,7 @@ struct BUFFER
 		pBase = new BYTE[length];
 		dwSize = length;
 	}
-	//delete pBase manually
+	~BUFFER() { delete[] pBase; }
 };
 
 template <typename T>

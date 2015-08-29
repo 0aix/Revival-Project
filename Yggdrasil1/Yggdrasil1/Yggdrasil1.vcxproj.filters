@@ -52,6 +52,9 @@
     <ClCompile Include="SocketHandler.cpp">
       <Filter>Source Files\NET</Filter>
     </ClCompile>
+    <ClCompile Include="Packet.cpp">
+      <Filter>Source Files\NET</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
