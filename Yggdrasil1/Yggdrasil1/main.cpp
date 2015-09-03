@@ -9,7 +9,7 @@
 bool running = true;
 const double tickrate = 60.0; //per second
 const double tick = 1.0 / tickrate;
-GameClock clock;
+Clock clock;
 double time = 0.0;
 ServerHandler server(2);
 

@@ -1,8 +1,12 @@
 # Revival-Project
 
 # Cardinal1
-- Latest project
 - Need to switch to 64-bit project later
+- Refer to Cardinal2
+
+# Cardinal2
+- Latest standalone on 64-bit
+- Refer to Yggdrasil
 
 # Jotunheimr
 - Jotunheimr0 - compiles
@@ -16,9 +20,12 @@
 # assetmanager.txt
 - Asset file structures
 
-#Yggdrasil
-- Server
-- Client
+# Yggdrasil
+## Server
+ - Latest project
+ - Made changes to Cardinal2 buffers, world, etc.
+## Client
+ - Empty
 
-#Alfheimr
-- Server of all servers
+# Alfheimr
+- Main server

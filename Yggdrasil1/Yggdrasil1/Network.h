@@ -3,6 +3,7 @@
 #include "Misc.h"
 
 #define MAX_PACKET_SIZE 1024
+#define MAX_DATA_SIZE 256
 
 class ISocketHandler;
 class ICharacter;
@@ -12,36 +13,36 @@ typedef void(*Func)(ISocketHandler* handler);
 
 struct Address
 {
-	unsigned long address;
-	unsigned short port;
+	DWORD address;
+	WORD port;
 	SOCKADDR_IN addr;
 
 	Address() {}
-	Address(byte a, byte b, byte c, byte d, unsigned short p);
-	Address(unsigned long a, unsigned short p);
+	Address(BYTE a, BYTE b, BYTE c, BYTE d, WORD p);
+	Address(DWORD a, WORD p);
 	Address(SOCKADDR_IN a);
 	inline bool operator==(const Address& rhs);
 };
 
-//add read/write
+//Packets will never be pointers. always placed on the stack. use by reference
 struct Packet
 {
-	byte* data;
-	unsigned long length;
-	unsigned long maxlength;
-	unsigned long index = 0;
+	BYTE* data;
+	WORD length;
+	WORD maxlength;
+	WORD index = 0;
+	bool canFlush = true;
 
-	Packet();
-	Packet(unsigned long size);
+	Packet(WORD size = MAX_PACKET_SIZE);
 	~Packet();
 
 	bool ReadyToRead();
-	bool ReadBytes(byte* dest, unsigned long len);
+	bool ReadBytes(BYTE* dest, WORD len);
 
 	template <typename T>
 	bool Read(T& get)
 	{
-		unsigned long size = sizeof(T);
+		WORD size = sizeof(T);
 		if (index + size <= length)
 		{
 			get = *(T*)(data + index);
@@ -52,51 +53,76 @@ struct Packet
 	}
 
 	bool ReadyToWrite();
-	bool WriteBytes(byte* src, unsigned long len);
+	bool WriteBytes(BYTE* src, WORD len);
 	template <typename T>
 	bool Write(T set)
 	{
-		unsigned long size = sizeof(T);
+		WORD size = sizeof(T);
 		if (index + size <= maxlength)
 		{
 			*(T*)(data + index) = set;
-			index += size;
 			length += size;
 			return true;
 		}
+		canFlush = false;
 		return false;
 	}
+	bool Flush(bool flush = true);
 };
 
-struct PacketInfo
+//exception to the packets. always use Data as pointers
+struct Data : Packet
 {
-	byte* data;
-	unsigned long length = 0; //length 0 means do not resend
-	byte uid; //unique id for msg type
+	bool critical;
+
+	Data(WORD size, bool c);
+};
+
+typedef LList<Data> DataList;
+
+struct PacketRecord
+{
+	DataList dataList;
 	double time_sent;
-	
-	PacketInfo();
-	PacketInfo(Packet& packet);
-	~PacketInfo();
+
+	~PacketRecord();
 };
 
-struct PacketHandler
+struct PacketRecordHandler
 {
-	Address addr;
-	Packet recv;
-	Packet send;
-	UINT16 recv_id; //seq number for recv packet
+	PacketRecord record[32];
+	WORD id = 0; //most recent packet seq
+	BYTE left = 0;
+	BYTE right = 0; //corresponds with id
 };
 
 struct Ack
 {
-	UINT16 recv_id = 0; //most recent recv packet seq
-	UINT16 send_id = 0; //most recent send packet seq
-	UINT64 recv_ack = 0; //ack bitfield - lowest bit is most recent
-	UINT64 send_ack = 0;
+	WORD id = 0; //most recent packet seq
+	DWORD bitfield = 0; //ack bitfield - lowest bit is most recent
+
+	//returns xor
+	DWORD UpdateAck(WORD seq, DWORD bits)
+	{
+		if (seq_recent(seq, id))
+		{
+			WORD diff = seq - id;
+			if (diff >= 32)
+			{
+				bitfield = bits;
+				return bits;
+			}
+
+		}
+		else
+		{
+
+		}
+	}
 
 	//2 bytes : 0 - 65535
-	static bool seq_recent(UINT16 s1, UINT16 s2)
+	//true if s1 more recent than s2
+	static bool seq_recent(WORD s1, WORD s2)
 	{
 		return (s1 > s2 && s1 - s2 <= 32768) || (s2 > s1 && s2 - s1  > 32768);
 	}
@@ -106,12 +132,16 @@ struct Ack
 struct Connection
 {
 	Address addr;
-	Ack ack;
+	//PacketRecordHandler handler;
+	DataList dataList;
+	Ack recv_ack;
+	Ack send_ack;
 	DWORD hi;
 	DWORD lo;
 	ICharacter* player; //World releases the character for now
 
-	bool connected = false;
+	bool connected = false; //??
+	bool ready = false;
 };
 
 class Socket
@@ -131,19 +161,25 @@ private:
 class ISocketHandler
 {
 public:
-	ISocketHandler(int count);
+	ISocketHandler(BYTE count);
 	~ISocketHandler();
+	virtual void Ready() = 0;
 	virtual void Receive() = 0;
 	virtual bool Handle() = 0;
 	virtual void Update() = 0;
 	virtual void Broadcast() = 0;
 
+	virtual bool Send() = 0;
+
 protected:
 	Socket socket;
-	PacketHandler packet;
+	Address addr;
+	Packet send;
+	Packet recv;
+	WORD recv_id; //seq number for recv packet
 
 	Func* funcTable;
-	int tableCount;
+	BYTE tableCount;
 };
 
 class ServerHandler : public ISocketHandler
@@ -151,10 +187,13 @@ class ServerHandler : public ISocketHandler
 public:
 	ServerHandler(int maxconn);
 	~ServerHandler();
+	void Ready();
 	void Receive();
 	bool Handle();
 	void Update();
 	void Broadcast();
+
+	bool Send();
 
 	World* world;
 
@@ -164,7 +203,9 @@ private:
 	Connection** client;
 	int maxCount;
 	int playerCount;
+	Clock clock;
 
 	//Func Table
 	static void Connect(ISocketHandler* handler);
+	static void Ack(ISocketHandler* handler);
 };
