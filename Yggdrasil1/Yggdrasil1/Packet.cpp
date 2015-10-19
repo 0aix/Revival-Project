@@ -1,15 +1,10 @@
 #include "stdafx.h"
 #include "Network.h"
 
-Packet::Packet()
+Packet::Packet(WORD size)
 {
-	data = new byte[MAX_PACKET_SIZE];
-	length = MAX_PACKET_SIZE;
-	maxlength = MAX_PACKET_SIZE;
-}
-
-Packet::Packet(unsigned long size)
-{
+	if (size > MAX_PACKET_SIZE)
+		size = MAX_PACKET_SIZE;
 	data = new byte[size];
 	length = size;
 	maxlength = size;
@@ -26,7 +21,7 @@ bool Packet::ReadyToRead()
 	return data != NULL && length > 0;
 }
 
-bool Packet::ReadBytes(byte* dest, unsigned long len)
+bool Packet::ReadBytes(byte* dest, WORD len)
 {
 	if (index + len <= length)
 	{
@@ -41,10 +36,11 @@ bool Packet::ReadyToWrite()
 {
 	index = 0;
 	length = 0;
+	canFlush = true;
 	return data != NULL;
 }
 
-bool Packet::WriteBytes(byte* src, unsigned long len)
+bool Packet::WriteBytes(byte* src, WORD len)
 {
 	if (index + len <= maxlength)
 	{
@@ -53,5 +49,35 @@ bool Packet::WriteBytes(byte* src, unsigned long len)
 		length += len;
 		return true;
 	}
+	canFlush = false;
 	return false;
+}
+
+bool Packet::Flush(bool flush)
+{
+	if (flush && canFlush)
+	{
+		length = index;
+		return true;
+	}
+	else
+	{
+		index = length;
+		canFlush = true;
+		return !flush;
+	}
+}
+
+//========================Data========================
+
+Data::Data(WORD size, bool c) : Packet(size < MAX_DATA_SIZE ? size : MAX_DATA_SIZE)
+{
+	critical = c;
+}
+
+//====================PacketRecord====================
+
+PacketRecord::~PacketRecord()
+{
+	dataList.RemoveAll();
 }

@@ -2,14 +2,14 @@
 
 #include <Windows.h>
 
-struct GameClock
+struct Clock
 {
+	LARGE_INTEGER li;
 	double frequency;
 	__int64 ticks;
 
 	void Start()
 	{
-		LARGE_INTEGER li;
 		QueryPerformanceFrequency(&li);
 		frequency = (double)li.QuadPart;
 
@@ -19,7 +19,6 @@ struct GameClock
 
 	double Time()
 	{
-		LARGE_INTEGER li;
 		QueryPerformanceCounter(&li);
 
 		double elapsed = (double)(li.QuadPart - ticks) / frequency;
@@ -28,12 +27,15 @@ struct GameClock
 		return elapsed;
 	}
 
-	double TicksInSeconds()
+	__int64 GetTicks()
 	{
-		LARGE_INTEGER li;
 		QueryPerformanceCounter(&li);
+		return li.QuadPart;
+	}
 
-		return (double)li.QuadPart / frequency;
+	double TicksToSeconds(__int64 t)
+	{
+		return (double)t / frequency;
 	}
 };
 
