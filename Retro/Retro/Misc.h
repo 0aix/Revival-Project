@@ -2,6 +2,30 @@
 
 #include <Windows.h>
 
+struct Input
+{
+	BYTE type; //0 == mouse, 1 == keyboard
+
+	POINT pos;
+	bool relative;
+	BYTE L; //0 nothing, 1 down, 2 up
+	BYTE M;
+	BYTE R;
+	bool scroll;
+	int D;
+	DWORD rawbuttons;
+	int DX;
+	int DY;
+
+	BYTE keycode;
+	bool state; //true == down, false == up
+	bool VK[146];
+	bool CTRL;
+	bool SHIFT;
+	bool ALT;
+	bool CLR;
+};
+
 struct Clock
 {
 	LARGE_INTEGER li;

@@ -73,9 +73,10 @@ bool ServerHandler::Handle()
 	unsigned long ip = addr.address;
 	unsigned short port = addr.port;
 	bool exists = false;
+	Connection* user;
 	for (int i = 0; i < maxCount; i++)
 	{
-		Connection* user = client[i];
+		user = client[i];
 		if (user != NULL && ip == user->addr.address && port == user->addr.port)
 		{
 			exists = true;
@@ -97,12 +98,22 @@ void ServerHandler::Update()
 {
 	Receive();
 	world->Update();
+	//Build data list here
+
 	Broadcast();
 }
 
 void ServerHandler::Broadcast()
 {
+	for (int i = 0, n = 0; i < maxCount && n < playerCount; i++, n++)
+	{
+		Connection* user = client[i];
+		if (user != NULL && send.ReadyToWrite())
+		{
+			DataList& dataList = user->dataList;
 
+		}
+	}
 }
 
 bool ServerHandler::Send()

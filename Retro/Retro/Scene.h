@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Cardinal.h"
-#include "Audio.h"
 #include "Graphics.h"
 #include "Misc.h"
 #include <Box2D.h>
@@ -46,26 +45,6 @@ private:
 	ViewManager* VM = NULL;
 };
 
-class LoadScene : public IScene
-{
-public:
-	LoadScene();
-	void Release();
-	void Update();
-	void HandleInput();
-	void Render();
-};
-
-class EndScene : public IScene
-{
-public:
-	EndScene();
-	void Release();
-	void Update();
-	void HandleInput();
-	void Render();
-};
-
 class TestScene : public IScene
 {
 public:
@@ -81,10 +60,14 @@ private:
 	b2Body* groundBody;
 	b2Body* body;
 
-	GameClock clock;
+	Clock clock;
 	double dTime;
 	float angle = 0.0f;
 	bool toggle = false;
+	double rcount = 0.0;
+	double ucount = 0.0;
+	double tcount = 0.0;
+	double time = 0.0;
 
 	IDirect3DTexture9* square;
 	D3DXVECTOR2 scaling;
