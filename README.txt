@@ -1,10 +1,10 @@
 # Revival-Project
 
-# Cardinal1
+# Cardinal1 (d)
 - Need to switch to 64-bit project later
 - Refer to Cardinal2
 
-# Cardinal2
+# Cardinal2 (d)
 - Latest standalone on 64-bit
 - Refer to Yggdrasil
 
